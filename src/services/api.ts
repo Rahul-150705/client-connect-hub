@@ -50,20 +50,24 @@ export const authAPI = {
   health: () => api.get('/auth/health'),
 };
 
-// Policy API
 export const policyAPI = {
   createPolicyWithClient: (policyData: {
     clientFullName: string;
     clientEmail: string;
     clientPhoneNumber: string;
+    clientWhatsappNumber?: string;
     clientAddress?: string;
     policyNumber: string;
     policyType: string;
+    vehicleType?: string;
+    registrationNumber?: string;
+    insurerName?: string;
     startDate: string;
     expiryDate: string;
     premium: number;
     premiumFrequency: string;
     policyDescription?: string;
+    pdfFilePath?: string;
   }) => api.post('/policies/create', policyData),
   
   getAllMyPolicies: () => api.get('/policies'),
@@ -74,18 +78,35 @@ export const policyAPI = {
     api.put(`/policies/${id}/status`, { status }),
   
   deletePolicy: (id: number) => api.delete(`/policies/${id}`),
+
+  // Manual renewal - mark policy as contacted manually by agent
+  markAsManuallyRenewed: (id: number, notes: string) =>
+    api.post(`/policies/${id}/manual-renew`, { notes }),
   
-  // PDF Upload and extraction
-  extractFromPdf: (file: File) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    return api.post('/policies/extract-from-pdf', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-  },
+  // PDF storage disabled
+  // uploadPdf: (file: File, clientEmail: string, policyNumber: string) => {
+  //   const formData = new FormData();
+  //   formData.append('file', file);
+  //   formData.append('clientEmail', clientEmail);
+  //   formData.append('policyNumber', policyNumber);
+  //   
+  //   return api.post('/policies/upload-pdf', formData, {
+  //     headers: {
+  //       'Content-Type': 'multipart/form-data',
+  //     },
+  //   });
+  // },
+  
+  // extractFromPdf: (file: File) => {
+  //   const formData = new FormData();
+  //   formData.append('file', file);
+  //   
+  //   return api.post('/policies/extract-from-pdf', formData, {
+  //     headers: {
+  //       'Content-Type': 'multipart/form-data',
+  //     },
+  //   });
+  // },
 };
 
 // Client API
@@ -100,6 +121,13 @@ export const clientAPI = {
     phoneNumber: string;
     address?: string;
   }) => api.post('/clients', clientData),
+};
+
+export const messagesAPI = {
+  getAllLogs: () => api.get('/messages/logs'),
+
+  // Retry a failed message (max 3 attempts)
+  retryMessage: (id: number) => api.post(`/messages/${id}/retry`),
 };
 
 export default api;

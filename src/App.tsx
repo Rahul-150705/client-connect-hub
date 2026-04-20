@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import Policies from './pages/Policies';
+import MessageLogs from './pages/MessageLogs';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -46,6 +47,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <Policies />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/messages"
+          element={
+            <ProtectedRoute>
+              <MessageLogs />
             </ProtectedRoute>
           }
         />

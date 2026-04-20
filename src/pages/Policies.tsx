@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FaFileContract, FaUser, FaClock, FaCheckCircle, FaPlus, FaEnvelope, FaPhone, FaTimes, FaTrash, FaFileUpload, FaFilePdf, FaBrain, FaSearch, FaFilter, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import { FaFileContract, FaUser, FaClock, FaCheckCircle, FaPlus, FaEnvelope, FaPhone, FaTimes, FaTrash, FaSearch, FaFilter, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+// PDF storage disabled: FaFileUpload, FaFilePdf, FaBrain removed
 import { policyAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
@@ -20,11 +21,14 @@ interface Policy {
   clientFullName: string;
   clientEmail: string;
   clientPhoneNumber: string;
+  clientWhatsappNumber?: string;
   clientAddress?: string;
+  pdfFilePath?: string;
+  hasPdf?: boolean;
 }
 
 const POLICY_TYPES = ['LIFE', 'HEALTH', 'VEHICLE', 'HOME', 'TRAVEL', 'BUSINESS'];
-const PREMIUM_FREQUENCIES = ['MONTHLY', 'QUARTERLY', 'YEARLY'];
+const VEHICLE_TYPES = ['Car', 'Bike', 'Truck', 'Auto', 'Other'];
 
 const Policies: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -35,32 +39,35 @@ const Policies: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [policyToDelete, setPolicyToDelete] = useState<Policy | null>(null);
   const [deleting, setDeleting] = useState(false);
-  
+
   // Search & Advanced Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState({
     policyType: '',
-    premiumFrequency: '',
     minPremium: '',
     maxPremium: '',
     expiryDateFrom: '',
     expiryDateTo: '',
   });
-  
-  // PDF Upload states
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [extracting, setExtracting] = useState(false);
-  const [extractionConfidence, setExtractionConfidence] = useState<number | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
+  // PDF storage disabled
+  // const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  // const [uploadingPdf, setUploadingPdf] = useState(false);
+  // const fileInputRef = useRef<HTMLInputElement>(null);
+  const [submitting, setSubmitting] = useState(false);
+
   const [formData, setFormData] = useState({
     clientFullName: '',
     clientEmail: '',
     clientPhoneNumber: '',
+    clientWhatsappNumber: '',
     clientAddress: '',
     policyNumber: '',
-    policyType: 'LIFE',
+    policyType: 'VEHICLE',
+    vehicleType: 'Car',
+    registrationNumber: '',
+    insurerName: '',
     startDate: '',
     expiryDate: '',
     premium: '',
@@ -70,7 +77,7 @@ const Policies: React.FC = () => {
 
   useEffect(() => {
     fetchAllPolicies();
-    
+
     if (searchParams.get('action') === 'add') {
       setShowModal(true);
       setSearchParams({});
@@ -80,7 +87,7 @@ const Policies: React.FC = () => {
   const fetchAllPolicies = async () => {
     try {
       const response = await policyAPI.getAllMyPolicies();
-      const sortedPolicies = response.data.sort((a: Policy, b: Policy) => 
+      const sortedPolicies = response.data.sort((a: Policy, b: Policy) =>
         new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime()
       );
       setPolicies(sortedPolicies);
@@ -99,100 +106,67 @@ const Policies: React.FC = () => {
     });
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.type !== 'application/pdf') {
-        toast.error('Please upload a PDF file');
-        return;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error('File size must be less than 10MB');
-        return;
-      }
-      setUploadedFile(file);
-      handlePdfUpload(file);
-    }
-  };
+  // PDF storage disabled — file select/remove handlers commented out
+  // const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (file) {
+  //     if (file.type !== 'application/pdf') {
+  //       toast.error('Please upload a PDF file');
+  //       return;
+  //     }
+  //     if (file.size > 10 * 1024 * 1024) {
+  //       toast.error('File size must be less than 10MB');
+  //       return;
+  //     }
+  //     setUploadedFile(file);
+  //   }
+  // };
 
-  const handlePdfUpload = async (file: File) => {
-    setExtracting(true);
-    try {
-      const response = await policyAPI.extractFromPdf(file);
-      const extractedData = response.data;
-
-      if (extractedData.success) {
-        // Auto-fill form with extracted data
-        setFormData({
-          clientFullName: extractedData.clientFullName || '',
-          clientEmail: extractedData.clientEmail || '',
-          clientPhoneNumber: extractedData.clientPhoneNumber || '',
-          clientAddress: extractedData.clientAddress || '',
-          policyNumber: extractedData.policyNumber || '',
-          policyType: extractedData.policyType || 'LIFE',
-          startDate: extractedData.startDate || '',
-          expiryDate: extractedData.expiryDate || '',
-          premium: extractedData.premium || '',
-          premiumFrequency: extractedData.premiumFrequency || 'YEARLY',
-          policyDescription: extractedData.policyDescription || '',
-        });
-
-        setExtractionConfidence(extractedData.confidence);
-        
-        toast.success(
-          `🤖 AI successfully extracted data! ${extractedData.message}`,
-          { autoClose: 5000 }
-        );
-      } else {
-        toast.error(`❌ Failed to extract data: ${extractedData.message}`);
-      }
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.error || 'Failed to extract data from PDF';
-      toast.error(`❌ ${errorMessage}`);
-      console.error('PDF extraction error:', error);
-    } finally {
-      setExtracting(false);
-    }
-  };
-
-  const handleRemoveFile = () => {
-    setUploadedFile(null);
-    setExtractionConfidence(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
+  // const handleRemoveFile = () => {
+  //   setUploadedFile(null);
+  //   if (fileInputRef.current) {
+  //     fileInputRef.current.value = '';
+  //   }
+  // };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const policyData = {
-      ...formData,
-      premium: parseFloat(formData.premium),
-    };
-
+    setSubmitting(true);
     try {
+      // PDF storage disabled — no PDF upload step
+
+      const policyData = {
+        ...formData,
+        premium: parseFloat(formData.premium),
+      };
+
       await policyAPI.createPolicyWithClient(policyData);
-      toast.success('✅ Policy created successfully! PDF file has been stored.');
+      toast.success('✅ Policy created successfully!');
       handleCloseModal();
       fetchAllPolicies();
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || 'Failed to create policy';
       toast.error(errorMessage);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
-    setUploadedFile(null);
-    setExtractionConfidence(null);
+    // setUploadedFile(null);  // PDF storage disabled
     setFormData({
       clientFullName: '',
       clientEmail: '',
       clientPhoneNumber: '',
+      clientWhatsappNumber: '',
       clientAddress: '',
       policyNumber: '',
-      policyType: 'LIFE',
+      policyType: 'VEHICLE',
+      vehicleType: 'Car',
+      registrationNumber: '',
+      insurerName: '',
       startDate: '',
       expiryDate: '',
       premium: '',
@@ -268,29 +242,28 @@ const Policies: React.FC = () => {
           policy.policyType,
           policy.policyDescription || '',
         ].map(f => f.toLowerCase());
-        
+
         if (!searchableFields.some(field => field.includes(query))) return false;
       }
 
       // Advanced filters
       if (advancedFilters.policyType && policy.policyType !== advancedFilters.policyType) return false;
-      if (advancedFilters.premiumFrequency && policy.premiumFrequency !== advancedFilters.premiumFrequency) return false;
-      
+
       if (advancedFilters.minPremium) {
         const minPremium = parseFloat(advancedFilters.minPremium);
         if (!isNaN(minPremium) && policy.premium < minPremium) return false;
       }
-      
+
       if (advancedFilters.maxPremium) {
         const maxPremium = parseFloat(advancedFilters.maxPremium);
         if (!isNaN(maxPremium) && policy.premium > maxPremium) return false;
       }
-      
+
       if (advancedFilters.expiryDateFrom) {
         const fromDate = new Date(advancedFilters.expiryDateFrom);
         if (new Date(policy.expiryDate) < fromDate) return false;
       }
-      
+
       if (advancedFilters.expiryDateTo) {
         const toDate = new Date(advancedFilters.expiryDateTo);
         if (new Date(policy.expiryDate) > toDate) return false;
@@ -303,7 +276,6 @@ const Policies: React.FC = () => {
   const clearAdvancedFilters = () => {
     setAdvancedFilters({
       policyType: '',
-      premiumFrequency: '',
       minPremium: '',
       maxPremium: '',
       expiryDateFrom: '',
@@ -454,23 +426,7 @@ const Policies: React.FC = () => {
                   </select>
                 </div>
 
-                {/* Premium Frequency */}
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">
-                    Premium Frequency
-                  </label>
-                  <select
-                    value={advancedFilters.premiumFrequency}
-                    onChange={(e) => setAdvancedFilters(prev => ({ ...prev, premiumFrequency: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground
-                      focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="">All Frequencies</option>
-                    {PREMIUM_FREQUENCIES.map(freq => (
-                      <option key={freq} value={freq}>{freq}</option>
-                    ))}
-                  </select>
-                </div>
+
 
                 {/* Premium Range */}
                 <div>
@@ -544,14 +500,14 @@ const Policies: React.FC = () => {
                 key={f}
                 onClick={() => setFilter(f)}
                 className={`px-4 py-2 rounded-lg font-medium text-sm transition-all
-                  ${filter === f 
-                    ? 'bg-primary text-primary-foreground' 
+                  ${filter === f
+                    ? 'bg-primary text-primary-foreground'
                     : 'bg-secondary text-muted-foreground hover:text-foreground'}`}
               >
-                {f === 'ALL' ? `All (${stats.total})` : 
-                 f === 'ACTIVE' ? `Active (${stats.active})` :
-                 f === 'EXPIRING' ? `Expiring Soon (${stats.expiring})` :
-                 `Expired (${stats.expired})`}
+                {f === 'ALL' ? `All (${stats.total})` :
+                  f === 'ACTIVE' ? `Active (${stats.active})` :
+                    f === 'EXPIRING' ? `Expiring Soon (${stats.expiring})` :
+                      `Expired (${stats.expired})`}
               </button>
             ))}
           </div>
@@ -613,8 +569,8 @@ const Policies: React.FC = () => {
                     const isExpiringSoon = daysUntilExpiry <= 30 && daysUntilExpiry > 0;
 
                     return (
-                      <tr 
-                        key={policy.policyId} 
+                      <tr
+                        key={policy.policyId}
                         className={`hover:bg-secondary/30 transition-colors ${isExpiringSoon ? 'bg-warning/5' : ''}`}
                       >
                         <td className="px-4 py-4">
@@ -659,11 +615,10 @@ const Policies: React.FC = () => {
                         </td>
                         <td className="px-4 py-4">
                           {policy.policyStatus === 'ACTIVE' ? (
-                            <span className={`font-medium ${
-                              daysUntilExpiry <= 7 ? 'text-destructive' : 
-                              daysUntilExpiry <= 30 ? 'text-warning' : 
-                              'text-success'
-                            }`}>
+                            <span className={`font-medium ${daysUntilExpiry <= 7 ? 'text-destructive' :
+                              daysUntilExpiry <= 30 ? 'text-warning' :
+                                'text-success'
+                              }`}>
                               {daysUntilExpiry > 0 ? `${daysUntilExpiry} days` : 'Expired'}
                             </span>
                           ) : (
@@ -691,17 +646,17 @@ const Policies: React.FC = () => {
 
         {/* Delete Confirmation Modal */}
         {showDeleteModal && policyToDelete && (
-          <div 
+          <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4"
             onClick={handleDeleteCancel}
           >
-            <div 
+            <div
               className="w-full max-w-md bg-card rounded-2xl border border-border shadow-lg"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between p-6 border-b border-border">
                 <h2 className="text-xl font-bold text-foreground">Delete Policy</h2>
-                <button 
+                <button
                   onClick={handleDeleteCancel}
                   className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground
                     hover:bg-secondary hover:text-foreground transition-all"
@@ -752,17 +707,17 @@ const Policies: React.FC = () => {
 
         {/* Add Policy Modal with ChatGPT AI Upload */}
         {showModal && (
-          <div 
+          <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4"
             onClick={handleCloseModal}
           >
-            <div 
+            <div
               className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-card rounded-2xl border border-border shadow-lg"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between p-6 border-b border-border">
                 <h2 className="text-xl font-bold text-foreground">Add New Policy</h2>
-                <button 
+                <button
                   onClick={handleCloseModal}
                   className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground
                     hover:bg-secondary hover:text-foreground transition-all"
@@ -772,102 +727,25 @@ const Policies: React.FC = () => {
               </div>
 
               <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                {/* ChatGPT AI Upload Section */}
+                {/* PDF Upload Section — disabled
                 <div className="border-2 border-dashed border-primary/30 rounded-xl p-6 bg-gradient-to-br from-primary/5 to-purple/5">
                   <div className="text-center">
-                    <div className="flex items-center justify-center gap-2 mb-3">
-                      <FaBrain className="text-4xl text-primary animate-pulse" />
-                      <span className="text-2xl">🤖</span>
-                    </div>
                     <h3 className="text-lg font-semibold text-foreground mb-2">
-                      ChatGPT AI-Powered Extraction
+                      Upload Policy PDF (Phase 1)
                     </h3>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Upload a PDF policy document and let ChatGPT AI automatically extract information
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Upload a PDF policy document manually.
                     </p>
-                    <div className="flex items-center justify-center gap-2 mb-4">
-                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-medium">
-                        <FaBrain className="text-sm" /> Powered by OpenAI GPT-3.5-turbo
-                      </div>
-                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-success/20 text-success text-xs font-medium">
-                        <FaCheckCircle /> 95% Accuracy
-                      </div>
-                    </div>
-
-                    {!uploadedFile ? (
-                      <>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="application/pdf"
-                          onChange={handleFileSelect}
-                          className="hidden"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="inline-flex items-center gap-2 px-6 py-3 rounded-lg 
-                            bg-gradient-primary text-white font-medium hover:opacity-90 
-                            transition-all shadow-glow"
-                        >
-                          <FaFileUpload /> Upload Policy PDF
-                        </button>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Max file size: 10MB • PDF will be stored securely
-                        </p>
-                      </>
-                    ) : (
-                      <div className="flex items-center justify-between p-4 rounded-lg bg-background border border-border">
-                        <div className="flex items-center gap-3">
-                          <FaFilePdf className="text-2xl text-destructive" />
-                          <div className="text-left">
-                            <p className="text-sm font-medium text-foreground">
-                              {uploadedFile.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {(uploadedFile.size / 1024).toFixed(2)} KB • Will be stored with policy
-                            </p>
-                            {extractionConfidence !== null && (
-                              <p className="text-xs text-success mt-1 flex items-center gap-1">
-                                <FaBrain /> AI Confidence: {(extractionConfidence * 100).toFixed(0)}%
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={handleRemoveFile}
-                          disabled={extracting}
-                          className="p-2 rounded-lg text-destructive hover:bg-destructive/10 
-                            transition-all disabled:opacity-50"
-                        >
-                          <FaTimes />
-                        </button>
-                      </div>
-                    )}
-
-                    {extracting && (
-                      <div className="flex items-center justify-center gap-3 mt-4 p-4 rounded-lg bg-primary/10">
-                        <div className="spinner" />
-                        <div className="text-left">
-                          <p className="text-sm text-primary font-medium">
-                            🤖 ChatGPT AI is analyzing your document...
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            This may take 5-10 seconds
-                          </p>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
+                */}
 
                 {/* Client Information */}
                 <div>
                   <h3 className="text-lg font-semibold text-foreground mb-4 pb-2 border-b border-border">
                     Client Information
                   </h3>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-foreground">Client Full Name *</label>
@@ -898,7 +776,7 @@ const Policies: React.FC = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">Client Phone Number *</label>
+                      <label className="text-sm font-medium text-foreground">Client Phone Number (SMS) *</label>
                       <input
                         type="tel"
                         name="clientPhoneNumber"
@@ -906,6 +784,19 @@ const Policies: React.FC = () => {
                         onChange={handleInputChange}
                         placeholder="+919876543210"
                         required
+                        className="w-full px-4 py-3 rounded-lg bg-input border border-border
+                          text-foreground placeholder:text-muted-foreground
+                          focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">WhatsApp Number</label>
+                      <input
+                        type="tel"
+                        name="clientWhatsappNumber"
+                        value={formData.clientWhatsappNumber}
+                        onChange={handleInputChange}
+                        placeholder="+919876543210"
                         className="w-full px-4 py-3 rounded-lg bg-input border border-border
                           text-foreground placeholder:text-muted-foreground
                           focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -932,7 +823,7 @@ const Policies: React.FC = () => {
                   <h3 className="text-lg font-semibold text-foreground mb-4 pb-2 border-b border-border">
                     Policy Information
                   </h3>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-foreground">Policy Number *</label>
@@ -958,12 +849,49 @@ const Policies: React.FC = () => {
                         className="w-full px-4 py-3 rounded-lg bg-input border border-border
                           text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                       >
+                        <option value="VEHICLE">Vehicle Insurance</option>
                         <option value="LIFE">Life Insurance</option>
                         <option value="HEALTH">Health Insurance</option>
-                        <option value="AUTO">Auto Insurance</option>
                         <option value="HOME">Home Insurance</option>
                         <option value="TRAVEL">Travel Insurance</option>
                       </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">Vehicle Type</label>
+                      <select
+                        name="vehicleType"
+                        value={formData.vehicleType}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 rounded-lg bg-input border border-border
+                          text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      >
+                        {VEHICLE_TYPES.map(type => (
+                          <option key={type} value={type}>{type}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">Registration Number</label>
+                      <input
+                        type="text"
+                        name="registrationNumber"
+                        value={formData.registrationNumber}
+                        onChange={handleInputChange}
+                        placeholder="e.g. TN01AB1234"
+                        className="w-full px-4 py-3 rounded-lg bg-input border border-border
+                          text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">Insurance Company</label>
+                      <input
+                        type="text"
+                        name="insurerName"
+                        value={formData.insurerName}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 rounded-lg bg-input border border-border
+                          text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-foreground">Start Date *</label>
@@ -1005,21 +933,7 @@ const Policies: React.FC = () => {
                           focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">Frequency *</label>
-                      <select
-                        name="premiumFrequency"
-                        value={formData.premiumFrequency}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-3 rounded-lg bg-input border border-border
-                          text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                      >
-                        <option value="MONTHLY">Monthly</option>
-                        <option value="QUARTERLY">Quarterly</option>
-                        <option value="YEARLY">Yearly</option>
-                      </select>
-                    </div>
+
                   </div>
 
                   <div className="space-y-2 mt-4">
@@ -1049,10 +963,11 @@ const Policies: React.FC = () => {
                   </button>
                   <button
                     type="submit"
+                    disabled={submitting}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-primary text-white font-medium
-                      hover:opacity-90 transition-all shadow-glow"
+                      hover:opacity-90 transition-all shadow-glow disabled:opacity-50"
                   >
-                    <FaBrain /> Create Policy with AI
+                    <FaFileContract /> {submitting ? 'Saving...' : 'Create Policy'}
                   </button>
                 </div>
               </form>

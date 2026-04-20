@@ -1,23 +1,81 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { FaFileContract, FaClock, FaCheckCircle, FaPlus } from 'react-icons/fa';
-import { policyAPI } from '../services/api';
+import { FaFileContract, FaClock, FaCheckCircle, FaPlus, FaChartLine, FaChartPie, FaChartBar } from 'react-icons/fa';
+import { policyAPI, messagesAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import Layout from '../components/Layout';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  PieChart, Pie, Cell,
+  BarChart, Bar,
+} from 'recharts';
 
 interface Policy {
   policyId: number;
   policyStatus: string;
   expiryDate: string;
+  vehicleType?: string;
+  policyType?: string;
 }
 
+interface MessageLog {
+  id: number;
+  status: string;
+  channel: string;
+}
+
+// ── Palette ──────────────────────────────────────────────────
+const VEHICLE_COLORS = [
+  '#f97316', // orange-500
+  '#3b82f6', // blue-500
+  '#22c55e', // green-500
+  '#a855f7', // purple-500
+  '#ec4899', // pink-500
+  '#14b8a6', // teal-500
+  '#eab308', // yellow-500
+  '#6366f1', // indigo-500
+];
+
+const CHART_TOOLTIP_STYLE = {
+  backgroundColor: 'hsl(20, 14%, 12%)',
+  border: '1px solid hsl(20, 14%, 22%)',
+  borderRadius: '12px',
+  color: '#fff',
+  fontSize: '13px',
+  padding: '10px 14px',
+};
+
+// ── Helpers ──────────────────────────────────────────────────
+const getMonthLabel = (date: Date) =>
+  date.toLocaleString('default', { month: 'short', year: '2-digit' });
+
+// Custom label in the centre of each pie slice
+const renderPieLabel = ({
+  cx, cy, midAngle, innerRadius, outerRadius, percent, name,
+}: any) => {
+  const RADIAN = Math.PI / 180;
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  if (percent < 0.05) return null; // hide tiny slices
+  return (
+    <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight={600}>
+      {name} {(percent * 100).toFixed(0)}%
+    </text>
+  );
+};
+
+// ── Component ────────────────────────────────────────────────
 const Dashboard: React.FC = () => {
+  const [policies, setPolicies] = useState<Policy[]>([]);
+  const [messageLogs, setMessageLogs] = useState<MessageLog[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [stats, setStats] = useState({
     totalPolicies: 0,
     activePolicies: 0,
     expiringPolicies: 0,
   });
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchDashboardData();
@@ -25,23 +83,31 @@ const Dashboard: React.FC = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await policyAPI.getAllMyPolicies();
-      const policies: Policy[] = response.data;
+      const [policyRes, msgRes] = await Promise.all([
+        policyAPI.getAllMyPolicies(),
+        messagesAPI.getAllLogs().catch(() => ({ data: [] })),
+      ]);
 
-      const activePolicies = policies.filter(p => p.policyStatus === 'ACTIVE').length;
-      
+      const pols: Policy[] = policyRes.data;
+      const msgs: MessageLog[] = msgRes.data;
+
+      setPolicies(pols);
+      setMessageLogs(msgs);
+
+      const activePolicies = pols.filter(p => p.policyStatus === 'ACTIVE').length;
+
       const today = new Date();
       const thirtyDaysLater = new Date(today);
       thirtyDaysLater.setDate(today.getDate() + 30);
-      
-      const expiringPolicies = policies.filter(p => {
+
+      const expiringPolicies = pols.filter(p => {
         if (p.policyStatus !== 'ACTIVE') return false;
         const expiryDate = new Date(p.expiryDate);
         return expiryDate >= today && expiryDate <= thirtyDaysLater;
       }).length;
 
       setStats({
-        totalPolicies: policies.length,
+        totalPolicies: pols.length,
         activePolicies,
         expiringPolicies,
       });
@@ -53,6 +119,49 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // ── Derived chart data ───────────────────────────────────
+  const renewalLineData = useMemo(() => {
+    const today = new Date();
+    const monthBuckets: Record<string, number> = {};
+    // Pre-fill 6 months
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+      monthBuckets[getMonthLabel(d)] = 0;
+    }
+    const sixMonthsLater = new Date(today.getFullYear(), today.getMonth() + 6, 0);
+    policies.forEach(p => {
+      if (p.policyStatus !== 'ACTIVE') return;
+      const exp = new Date(p.expiryDate);
+      if (exp < today || exp > sixMonthsLater) return;
+      const key = getMonthLabel(exp);
+      if (key in monthBuckets) monthBuckets[key]++;
+    });
+    return Object.entries(monthBuckets).map(([month, count]) => ({ month, policies: count }));
+  }, [policies]);
+
+  const vehiclePieData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    policies.forEach(p => {
+      const vType = p.vehicleType?.trim() || 'Other';
+      counts[vType] = (counts[vType] || 0) + 1;
+    });
+    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+  }, [policies]);
+
+  const messageBarData = useMemo(() => {
+    let sent = 0;
+    let failed = 0;
+    messageLogs.forEach(m => {
+      if (m.status === 'SENT') sent++;
+      else if (m.status === 'FAILED') failed++;
+    });
+    return [
+      { name: 'Sent', count: sent, fill: '#22c55e' },
+      { name: 'Failed', count: failed, fill: '#ef4444' },
+    ];
+  }, [messageLogs]);
+
+  // ── Stat cards ───────────────────────────────────────────
   const statCards = [
     {
       title: 'Total Policies',
@@ -137,6 +246,127 @@ const Dashboard: React.FC = () => {
               </div>
             );
           })}
+        </div>
+
+        {/* ───────── Analytics Section ───────── */}
+        <div>
+          <h2 className="text-xl font-bold text-foreground mb-5 flex items-center gap-2">
+            <FaChartLine className="text-primary" /> Analytics Overview
+          </h2>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* 1. Line Chart – Projected Renewals */}
+            <div className="bg-card rounded-2xl border border-border p-6 shadow-sm
+              transition-all duration-300 hover:shadow-lg hover:border-primary/20 col-span-1 lg:col-span-2">
+              <div className="flex items-center gap-2 mb-4">
+                <FaChartLine className="text-primary" />
+                <h3 className="text-lg font-semibold text-foreground">Projected Renewals</h3>
+                <span className="text-xs text-muted-foreground ml-auto">Next 6 months</span>
+              </div>
+              {renewalLineData.every(d => d.policies === 0) ? (
+                <div className="flex items-center justify-center h-[260px] text-muted-foreground text-sm">
+                  No upcoming renewals in the next 6 months
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <LineChart data={renewalLineData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#f97316" stopOpacity={0.8} />
+                        <stop offset="100%" stopColor="#f97316" stopOpacity={0.1} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(20, 14%, 22%)" />
+                    <XAxis dataKey="month" tick={{ fill: '#9ca3af', fontSize: 12 }} />
+                    <YAxis allowDecimals={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
+                    <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Line
+                      type="monotone"
+                      dataKey="policies"
+                      name="Renewals Due"
+                      stroke="#f97316"
+                      strokeWidth={3}
+                      dot={{ fill: '#f97316', r: 5, strokeWidth: 2, stroke: '#fff' }}
+                      activeDot={{ r: 7, strokeWidth: 0 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
+            {/* 2. Pie Chart – Vehicle Breakdown */}
+            <div className="bg-card rounded-2xl border border-border p-6 shadow-sm
+              transition-all duration-300 hover:shadow-lg hover:border-primary/20">
+              <div className="flex items-center gap-2 mb-4">
+                <FaChartPie className="text-primary" />
+                <h3 className="text-lg font-semibold text-foreground">Vehicle Breakdown</h3>
+              </div>
+              {vehiclePieData.length === 0 ? (
+                <div className="flex items-center justify-center h-[260px] text-muted-foreground text-sm">
+                  No policies to display
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie
+                      data={vehiclePieData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={110}
+                      dataKey="value"
+                      label={renderPieLabel}
+                      labelLine={false}
+                      animationBegin={0}
+                      animationDuration={800}
+                    >
+                      {vehiclePieData.map((_entry, idx) => (
+                        <Cell key={`cell-${idx}`} fill={VEHICLE_COLORS[idx % VEHICLE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                    <Legend
+                      wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
+                      formatter={(value: string) => <span style={{ color: '#d4d4d8' }}>{value}</span>}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
+            {/* 3. Bar Chart – Message Success Rates */}
+            <div className="bg-card rounded-2xl border border-border p-6 shadow-sm
+              transition-all duration-300 hover:shadow-lg hover:border-primary/20">
+              <div className="flex items-center gap-2 mb-4">
+                <FaChartBar className="text-primary" />
+                <h3 className="text-lg font-semibold text-foreground">Message Delivery</h3>
+              </div>
+              {messageLogs.length === 0 ? (
+                <div className="flex items-center justify-center h-[260px] text-muted-foreground text-sm">
+                  No messages sent yet
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={messageBarData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(20, 14%, 22%)" />
+                    <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 12 }} />
+                    <YAxis allowDecimals={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
+                    <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                    <Bar
+                      dataKey="count"
+                      name="Messages"
+                      radius={[8, 8, 0, 0]}
+                      animationDuration={800}
+                    >
+                      {messageBarData.map((entry, idx) => (
+                        <Cell key={`bar-${idx}`} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Quick Actions */}
