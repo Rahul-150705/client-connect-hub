@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FaFileContract, FaUser, FaClock, FaCheckCircle, FaPlus, FaEnvelope, FaPhone, FaTimes, FaTrash, FaSearch, FaFilter, FaChevronDown, FaChevronUp } from 'react-icons/fa';
-// PDF storage disabled: FaFileUpload, FaFilePdf, FaBrain removed
 import { policyAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import Layout from '../components/Layout';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface Policy {
   policyId: number;
@@ -31,14 +31,12 @@ const POLICY_TYPES = ['LIFE', 'HEALTH', 'VEHICLE', 'HOME', 'TRAVEL', 'BUSINESS']
 const VEHICLE_TYPES = ['Car', 'Bike', 'Truck', 'Auto', 'Other'];
 
 const Policies: React.FC = () => {
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [policies, setPolicies] = useState<Policy[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('ALL');
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [policyToDelete, setPolicyToDelete] = useState<Policy | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
   // Search & Advanced Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,12 +48,6 @@ const Policies: React.FC = () => {
     expiryDateFrom: '',
     expiryDateTo: '',
   });
-
-  // PDF storage disabled
-  // const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  // const [uploadingPdf, setUploadingPdf] = useState(false);
-  // const fileInputRef = useRef<HTMLInputElement>(null);
-  const [submitting, setSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     clientFullName: '',
@@ -75,29 +67,55 @@ const Policies: React.FC = () => {
     policyDescription: '',
   });
 
-  useEffect(() => {
-    fetchAllPolicies();
+  // Queries
+  const policiesQuery = useQuery({
+    queryKey: ['policies'],
+    queryFn: () => policyAPI.getAllMyPolicies().then(res => 
+      res.data.sort((a: Policy, b: Policy) =>
+        new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime()
+      )
+    ),
+  });
 
+  const policies = policiesQuery.data || [];
+  const loading = policiesQuery.isLoading;
+
+  // Mutations
+  const createMutation = useMutation({
+    mutationFn: (data: any) => policyAPI.createPolicyWithClient(data),
+    onSuccess: () => {
+      toast.success('✅ Policy created successfully!');
+      handleCloseModal();
+      queryClient.invalidateQueries({ queryKey: ['policies'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardSummary'] });
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.error || 'Failed to create policy';
+      toast.error(errorMessage);
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => policyAPI.deletePolicy(id),
+    onSuccess: () => {
+      toast.success('Policy deleted successfully!');
+      setShowDeleteModal(false);
+      setPolicyToDelete(null);
+      queryClient.invalidateQueries({ queryKey: ['policies'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardSummary'] });
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.error || 'Failed to delete policy';
+      toast.error(errorMessage);
+    }
+  });
+
+  useEffect(() => {
     if (searchParams.get('action') === 'add') {
       setShowModal(true);
       setSearchParams({});
     }
   }, []);
-
-  const fetchAllPolicies = async () => {
-    try {
-      const response = await policyAPI.getAllMyPolicies();
-      const sortedPolicies = response.data.sort((a: Policy, b: Policy) =>
-        new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime()
-      );
-      setPolicies(sortedPolicies);
-    } catch (error) {
-      toast.error('Failed to fetch policies');
-      console.error('Fetch policies error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -129,28 +147,12 @@ const Policies: React.FC = () => {
   //   }
   // };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    setSubmitting(true);
-    try {
-      // PDF storage disabled — no PDF upload step
-
-      const policyData = {
-        ...formData,
-        premium: parseFloat(formData.premium),
-      };
-
-      await policyAPI.createPolicyWithClient(policyData);
-      toast.success('✅ Policy created successfully!');
-      handleCloseModal();
-      fetchAllPolicies();
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.error || 'Failed to create policy';
-      toast.error(errorMessage);
-    } finally {
-      setSubmitting(false);
-    }
+    createMutation.mutate({
+      ...formData,
+      premium: parseFloat(formData.premium),
+    });
   };
 
   const handleCloseModal = () => {
@@ -180,22 +182,9 @@ const Policies: React.FC = () => {
     setShowDeleteModal(true);
   };
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = () => {
     if (!policyToDelete) return;
-
-    setDeleting(true);
-    try {
-      await policyAPI.deletePolicy(policyToDelete.policyId);
-      toast.success('Policy deleted successfully!');
-      setShowDeleteModal(false);
-      setPolicyToDelete(null);
-      fetchAllPolicies();
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.error || 'Failed to delete policy';
-      toast.error(errorMessage);
-    } finally {
-      setDeleting(false);
-    }
+    deleteMutation.mutate(policyToDelete.policyId);
   };
 
   const handleDeleteCancel = () => {
@@ -682,23 +671,23 @@ const Policies: React.FC = () => {
                 </div>
 
                 <div className="flex justify-end gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={handleDeleteCancel}
-                    disabled={deleting}
-                    className="px-4 py-2 rounded-lg bg-secondary text-foreground font-medium
-                      hover:bg-secondary/80 transition-all disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleDeleteConfirm}
-                    disabled={deleting}
-                    className="px-4 py-2 rounded-lg bg-destructive text-white font-medium
-                      hover:opacity-90 transition-all disabled:opacity-50"
-                  >
-                    {deleting ? 'Deleting...' : 'Delete Policy'}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={handleDeleteCancel}
+                      disabled={deleteMutation.isPending}
+                      className="px-4 py-2 rounded-lg bg-secondary text-foreground font-medium
+                        hover:bg-secondary/80 transition-all disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleDeleteConfirm}
+                      disabled={deleteMutation.isPending}
+                      className="px-4 py-2 rounded-lg bg-destructive text-white font-medium
+                        hover:opacity-90 transition-all disabled:opacity-50"
+                    >
+                      {deleteMutation.isPending ? 'Deleting...' : 'Delete Policy'}
+                    </button>
                 </div>
               </div>
             </div>
@@ -963,11 +952,11 @@ const Policies: React.FC = () => {
                   </button>
                   <button
                     type="submit"
-                    disabled={submitting}
+                    disabled={createMutation.isPending}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-primary text-white font-medium
                       hover:opacity-90 transition-all shadow-glow disabled:opacity-50"
                   >
-                    <FaFileContract /> {submitting ? 'Saving...' : 'Create Policy'}
+                    <FaFileContract /> {createMutation.isPending ? 'Saving...' : 'Create Policy'}
                   </button>
                 </div>
               </form>

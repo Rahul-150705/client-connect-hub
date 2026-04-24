@@ -15,10 +15,8 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts';
 import { Sparkline } from '../components/premium/Sparkline';
-import { BorderBeam } from '../components/premium/BorderBeam';
 import { GlassTooltip } from '../components/premium/GlassTooltip';
 import { DashboardSkeleton } from '../components/premium/ShimmerSkeleton';
-import { CursorSplineRobot } from '../components/premium/CursorSplineRobot';
 
 interface Policy {
   policyId: number;
@@ -236,14 +234,10 @@ const Dashboard: React.FC = () => {
     <Layout>
       <div className="relative min-h-screen text-foreground overflow-x-hidden">
         <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden">
-          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/10 rounded-full blur-[120px]" />
-          <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] bg-purple-500/5 rounded-full blur-[100px]" />
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/5 rounded-full blur-[120px]" />
           <div className="absolute inset-0 noise-overlay pointer-events-none" />
         </div>
-
-        {/* Floating cursor-aware Spline robot (desktop only) */}
-        <CursorSplineRobot />
 
         <motion.div className="max-w-[1600px] mx-auto space-y-8 relative z-10 p-4 lg:p-8" variants={containerVariants} initial="hidden" animate="visible">
           
@@ -363,7 +357,6 @@ const Dashboard: React.FC = () => {
             
             {/* Attention Required */}
             <div className="bg-red-950/20 backdrop-blur-xl border border-red-900/50 rounded-2xl p-6 relative overflow-hidden">
-              <BorderBeam duration={7} colorFrom="#ef4444" colorTo="#f59e0b" />
               <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full blur-[40px] pointer-events-none"></div>
               <div className="flex items-center gap-3 mb-5">
                 <div className="w-8 h-8 rounded-lg bg-red-500/20 text-red-500 flex items-center justify-center">
