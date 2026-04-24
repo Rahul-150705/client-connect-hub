@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Pages
 import Landing from './pages/Landing';
@@ -10,6 +11,18 @@ import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import Policies from './pages/Policies';
 import MessageLogs from './pages/MessageLogs';
+
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // Data stays fresh for 5 minutes
+      gcTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -87,10 +100,12 @@ function AppRoutes() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppRoutes />
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 
-export default App;
+export default App;

@@ -20,6 +20,17 @@ export default defineConfig(({ mode }) => ({
     dedupe: ["react", "react-dom"],
   },
   optimizeDeps: {
-    exclude: ["@splinetool/react-spline", "@splinetool/runtime"],
+    include: [
+      "@splinetool/react-spline",
+      "@splinetool/runtime",
+      "react/jsx-runtime",
+      "react",
+      "react-dom"
+    ],
+  },
+  build: {
+    commonjsOptions: {
+      transformMixedEsModules: true,
+    },
   },
 }));

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   FaSearch, FaBell, FaCalendarAlt, FaEllipsisH, FaCarAlt, FaHome, 
@@ -115,47 +116,55 @@ const getDaysLeftColor = (days: number) => {
   return 'text-emerald-500';
 };
 
+
+
+// ... interfaces
+
 // ── Component ────────────────────────────────────────────────
 const Dashboard: React.FC = () => {
-  const [policies, setPolicies] = useState<Policy[]>([]);
-  const [messageLogs, setMessageLogs] = useState<MessageLog[]>([]);
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [donutData, setDonutData] = useState<ChartData[]>([]);
-  const [commStats, setCommStats] = useState<CommunicationStats | null>(null);
-  const [insights, setInsights] = useState<AiInsight[]>([]);
-  
-  const [loading, setLoading] = useState(true);
   const [chartFilter, setChartFilter] = useState('30d');
   const navigate = useNavigate();
+  const period = parseInt(chartFilter.replace('d', ''));
 
-  useEffect(() => { 
-    fetchDashboardData(); 
-  }, [chartFilter]);
+  // Use queries for each data requirement
+  const policiesQuery = useQuery({
+    queryKey: ['policies'],
+    queryFn: () => policyAPI.getAllMyPolicies().then(res => res.data),
+  });
 
-  const fetchDashboardData = async () => {
-    try {
-      const period = parseInt(chartFilter.replace('d', ''));
-      const [policyRes, msgRes, summaryRes, distributionRes, statsRes, insightsRes] = await Promise.all([
-        policyAPI.getAllMyPolicies(),
-        messagesAPI.getAllLogs().catch(() => ({ data: [] })),
-        dashboardAPI.getSummary(period),
-        dashboardAPI.getClaimsDistribution(),
-        dashboardAPI.getCommunicationStats(),
-        dashboardAPI.getAiInsights(),
-      ]);
-      
-      setPolicies(policyRes.data);
-      setMessageLogs(msgRes.data);
-      setSummary(summaryRes.data);
-      setDonutData(distributionRes.data);
-      setCommStats(statsRes.data);
-      setInsights(insightsRes.data);
-    } catch (error) {
-      toast.error('Failed to fetch dashboard data');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const messageLogsQuery = useQuery({
+    queryKey: ['messageLogs'],
+    queryFn: () => messagesAPI.getAllLogs().then(res => res.data),
+  });
+
+  const summaryQuery = useQuery({
+    queryKey: ['dashboardSummary', period],
+    queryFn: () => dashboardAPI.getSummary(period).then(res => res.data),
+  });
+
+  const distributionQuery = useQuery({
+    queryKey: ['distribution'],
+    queryFn: () => dashboardAPI.getClaimsDistribution().then(res => res.data),
+  });
+
+  const statsQuery = useQuery({
+    queryKey: ['commStats'],
+    queryFn: () => dashboardAPI.getCommunicationStats().then(res => res.data),
+  });
+
+  const insightsQuery = useQuery({
+    queryKey: ['aiInsights'],
+    queryFn: () => dashboardAPI.getAiInsights().then(res => res.data),
+  });
+
+  const loading = policiesQuery.isLoading || messageLogsQuery.isLoading || summaryQuery.isLoading;
+
+  const policies = policiesQuery.data || [];
+  const messageLogs = messageLogsQuery.data || [];
+  const summary = summaryQuery.data;
+  const donutData = distributionQuery.data || [];
+  const commStats = statsQuery.data;
+  const insights = insightsQuery.data || [];
 
   const activePolicies = useMemo(() => policies.filter(p => p.policyStatus === 'ACTIVE'), [policies]);
   

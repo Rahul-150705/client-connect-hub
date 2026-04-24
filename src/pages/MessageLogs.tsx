@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import Layout from '../components/Layout';
 import { messagesAPI, policyAPI } from '../services/api';
 import { toast } from 'react-toastify';
@@ -9,8 +9,10 @@ import {
   FaCheckCircle, FaExclamationCircle, FaClock, FaWhatsapp, FaSms,
   FaPhoneAlt, FaTimes, FaExclamationTriangle
 } from 'react-icons/fa';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface MessageLog {
+// ... existing interface
   id: number;
   customerId: number;
   policyId: number;
@@ -30,13 +32,21 @@ interface MessageLog {
 }
 
 const MessageLogs: React.FC = () => {
-  const [logs, setLogs] = useState<MessageLog[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [retryingId, setRetryingId] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   
   const [hoveredLog, setHoveredLog] = useState<number | null>(null);
   const [selectedLog, setSelectedLog] = useState<MessageLog | null>(null);
+
+  // Queries
+  const logsQuery = useQuery({
+    queryKey: ['messageLogs'],
+    queryFn: () => messagesAPI.getAllLogs().then(res => res.data),
+  });
+
+  const logs = logsQuery.data || [];
+  const loading = logsQuery.isLoading;
 
   // Manual renewal modal state
   const [showManualModal, setShowManualModal] = useState(false);
@@ -47,51 +57,50 @@ const MessageLogs: React.FC = () => {
   const shouldReduceMotion = useReducedMotion();
   const { theme } = useTheme();
 
-  useEffect(() => {
-    fetchLogs();
-  }, []);
-
-  // Update selected log when logs change (for real-time updates)
-  useEffect(() => {
-    if (selectedLog) {
-      const updatedLog = logs.find(l => l.id === selectedLog.id);
-      if (updatedLog) {
-        setSelectedLog(updatedLog);
-      }
-    }
-  }, [logs, selectedLog]);
-
-  const fetchLogs = async () => {
-    try {
-      const response = await messagesAPI.getAllLogs();
-      setLogs(response.data);
-    } catch (error) {
-      toast.error('Failed to load message logs');
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRetry = async (logId: number) => {
-    setRetryingId(logId);
-    try {
-      const response = await messagesAPI.retryMessage(logId);
+  // Mutations for Retry and Manual Renewal
+  const retryMutation = useMutation({
+    mutationFn: (logId: number) => messagesAPI.retryMessage(logId),
+    onSuccess: (response) => {
       const updatedLog = response.data;
-
-      setLogs(prev => prev.map(log => (log.id === logId ? updatedLog : log)));
-
+      queryClient.setQueryData(['messageLogs'], (old: any) => 
+        old?.map((log: any) => log.id === updatedLog.id ? updatedLog : log)
+      );
+      
       if (updatedLog.status === 'SENT') {
         toast.success(`✅ Message resent successfully! (Attempt ${updatedLog.retryCount})`);
       } else {
         toast.warning(`⚠️ Retry attempt ${updatedLog.retryCount} failed. ${updatedLog.retryCount >= 3 ? 'Max retries exhausted.' : 'Try again.'}`);
       }
-    } catch (error: any) {
+    },
+    onError: (error: any) => {
       const errorMsg = error.response?.data?.error || 'Failed to retry message';
       toast.error(errorMsg);
-    } finally {
-      setRetryingId(null);
-    }
+    },
+    onSettled: () => setRetryingId(null)
+  });
+
+  const manualRenewalMutation = useMutation({
+    mutationFn: ({ policyId, notes }: { policyId: number, notes: string }) => 
+      policyAPI.markAsManuallyRenewed(policyId, notes),
+    onSuccess: () => {
+      toast.success('✅ Policy marked as MANUAL_RENEWED');
+      setShowManualModal(false);
+      setManualTarget(null);
+      setManualNotes('');
+      queryClient.invalidateQueries({ queryKey: ['messageLogs'] });
+      queryClient.invalidateQueries({ queryKey: ['policies'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardSummary'] });
+    },
+    onError: (error: any) => {
+      const errorMsg = error.response?.data?.error || 'Failed to mark policy as manually renewed';
+      toast.error(errorMsg);
+    },
+    onSettled: () => setSubmittingManual(false)
+  });
+
+  const handleRetry = (logId: number) => {
+    setRetryingId(logId);
+    retryMutation.mutate(logId);
   };
 
   const openManualModal = (log: MessageLog) => {
@@ -100,28 +109,16 @@ const MessageLogs: React.FC = () => {
     setShowManualModal(true);
   };
 
-  const handleManualRenewal = async () => {
-    if (!manualTarget) return;
-
-    if (!manualNotes.trim()) {
-      toast.error('Please add notes about the manual contact');
+  const handleManualRenewal = () => {
+    if (!manualTarget || !manualNotes.trim()) {
+      if (!manualNotes.trim()) toast.error('Please add notes');
       return;
     }
-
     setSubmittingManual(true);
-    try {
-      await policyAPI.markAsManuallyRenewed(manualTarget.policyId, manualNotes.trim());
-      toast.success(`✅ Policy ${manualTarget.policyNumber} marked as MANUAL_RENEWED`);
-      setShowManualModal(false);
-      setManualTarget(null);
-      setManualNotes('');
-      fetchLogs();
-    } catch (error: any) {
-      const errorMsg = error.response?.data?.error || 'Failed to mark policy as manually renewed';
-      toast.error(errorMsg);
-    } finally {
-      setSubmittingManual(false);
-    }
+    manualRenewalMutation.mutate({ 
+      policyId: manualTarget.policyId, 
+      notes: manualNotes.trim() 
+    });
   };
 
   // ===== DESIGN HELPERS =====
