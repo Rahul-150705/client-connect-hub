@@ -272,7 +272,7 @@ const Dashboard: React.FC = () => {
           {/* ═══ 1. SMART KPI ROW ═══ */}
           <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             {/* Total Policies */}
-            <div className="group bg-white/5 backdrop-blur-2xl border border-white/10 rounded-2xl p-6 hover:border-primary/50 hover:bg-white/[0.08] transition-all duration-500 shadow-xl">
+            <div className="group relative overflow-hidden bg-white/5 backdrop-blur-2xl border border-white/10 rounded-2xl p-6 hover:border-primary/50 hover:bg-white/[0.08] transition-all duration-500 shadow-xl">
               <div className="flex justify-between items-start mb-4">
                 <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Total Policies</p>
                 <div className="p-2 rounded-lg bg-primary/10 text-primary">
@@ -286,10 +286,11 @@ const Dashboard: React.FC = () => {
                   {Math.abs(summary?.policiesGrowthPercentage || 0).toFixed(1)}%
                 </div>
               </div>
+              <div className="mt-3 -mb-1"><Sparkline data={sparkPolicies} color="#2BC8B7" width={200} height={32} /></div>
             </div>
             
             {/* Expiring Soon */}
-            <div className={`group bg-white/5 backdrop-blur-2xl border ${summary?.expiringSoonCount && summary.expiringSoonCount > 10 ? 'border-red-500/30 bg-red-500/5' : 'border-white/10'} rounded-2xl p-6 hover:border-red-500/50 hover:bg-white/[0.08] transition-all duration-500 shadow-xl`}>
+            <div className={`group relative overflow-hidden bg-white/5 backdrop-blur-2xl border ${summary?.expiringSoonCount && summary.expiringSoonCount > 10 ? 'border-red-500/30 bg-red-500/5' : 'border-white/10'} rounded-2xl p-6 hover:border-red-500/50 hover:bg-white/[0.08] transition-all duration-500 shadow-xl`}>
               <div className="flex justify-between items-start mb-4">
                 <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Expiring Soon</p>
                 <div className={`p-2 rounded-lg ${summary?.expiringSoonCount && summary.expiringSoonCount > 10 ? 'bg-red-500/20 text-red-500' : 'bg-amber-500/10 text-amber-500'}`}>
@@ -306,10 +307,11 @@ const Dashboard: React.FC = () => {
                   <div className="text-muted-foreground text-[10px] font-bold bg-white/5 px-3 py-1 rounded-full border border-white/10 uppercase">Manageable</div>
                 )}
               </div>
+              <div className="mt-3 -mb-1"><Sparkline data={sparkExpiring} color="#f59e0b" width={200} height={32} /></div>
             </div>
 
             {/* Renewal Rate */}
-            <div className="group bg-white/5 backdrop-blur-2xl border border-white/10 rounded-2xl p-6 hover:border-accent/50 hover:bg-white/[0.08] transition-all duration-500 shadow-xl">
+            <div className="group relative overflow-hidden bg-white/5 backdrop-blur-2xl border border-white/10 rounded-2xl p-6 hover:border-accent/50 hover:bg-white/[0.08] transition-all duration-500 shadow-xl">
               <div className="flex justify-between items-start mb-4">
                 <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Renewal Rate</p>
                 <div className="p-2 rounded-lg bg-accent/10 text-accent">
@@ -322,10 +324,11 @@ const Dashboard: React.FC = () => {
                    OPTIMIZED
                 </div>
               </div>
+              <div className="mt-3 -mb-1"><Sparkline data={sparkRenewal} color="#9B99FE" width={200} height={32} /></div>
             </div>
 
             {/* Failed Messages */}
-            <div className={`group bg-white/5 backdrop-blur-2xl border ${summary?.failedMessagesCount && summary.failedMessagesCount > 0 ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/10'} rounded-2xl p-6 hover:border-amber-500/50 hover:bg-white/[0.08] transition-all duration-500 shadow-xl`}>
+            <div className={`group relative overflow-hidden bg-white/5 backdrop-blur-2xl border ${summary?.failedMessagesCount && summary.failedMessagesCount > 0 ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/10'} rounded-2xl p-6 hover:border-amber-500/50 hover:bg-white/[0.08] transition-all duration-500 shadow-xl`}>
               <div className="flex justify-between items-start mb-4">
                 <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Failed Delivery</p>
                 <div className={`p-2 rounded-lg ${summary?.failedMessagesCount && summary.failedMessagesCount > 0 ? 'bg-amber-500/20 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
@@ -342,6 +345,7 @@ const Dashboard: React.FC = () => {
                   <div className="text-emerald-400 bg-emerald-400/10 px-3 py-1 rounded-full border border-emerald-400/20 text-[10px] font-bold uppercase">All Clear</div>
                 )}
               </div>
+              <div className="mt-3 -mb-1"><Sparkline data={sparkFailed} color="#ef4444" width={200} height={32} /></div>
             </div>
           </motion.div>
 
@@ -350,6 +354,7 @@ const Dashboard: React.FC = () => {
             
             {/* Attention Required */}
             <div className="bg-red-950/20 backdrop-blur-xl border border-red-900/50 rounded-2xl p-6 relative overflow-hidden">
+              <BorderBeam duration={7} colorFrom="#ef4444" colorTo="#f59e0b" />
               <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full blur-[40px] pointer-events-none"></div>
               <div className="flex items-center gap-3 mb-5">
                 <div className="w-8 h-8 rounded-lg bg-red-500/20 text-red-500 flex items-center justify-center">
