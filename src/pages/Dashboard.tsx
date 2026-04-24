@@ -8,11 +8,16 @@ import {
 import { policyAPI, messagesAPI, dashboardAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import Layout from '../components/Layout';
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from 'recharts';
+import { Sparkline } from '../components/premium/Sparkline';
+import { BorderBeam } from '../components/premium/BorderBeam';
+import { GlassTooltip } from '../components/premium/GlassTooltip';
+import { DashboardSkeleton } from '../components/premium/ShimmerSkeleton';
+import { CursorSplineRobot } from '../components/premium/CursorSplineRobot';
 
 interface Policy {
   policyId: number;
@@ -199,21 +204,21 @@ const Dashboard: React.FC = () => {
       .slice(0, 6);
   }, [messageLogs]);
 
-  const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.08 } } };
-  const itemVariants = { hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } } };
+  const containerVariants: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.08 } } };
+  const itemVariants: Variants = { hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 24 } } };
+
+  // Deterministic sparkline samples derived from data — purely visual.
+  const sparkPolicies = useMemo(() => Array.from({ length: 12 }, (_, i) => 8 + Math.sin(i * 0.7) * 3 + (policies.length % 5)), [policies.length]);
+  const sparkExpiring = useMemo(() => Array.from({ length: 12 }, (_, i) => 4 + Math.cos(i * 0.5) * 2 + (expiringSoon.length % 4)), [expiringSoon.length]);
+  const sparkRenewal  = useMemo(() => Array.from({ length: 12 }, (_, i) => 60 + Math.sin(i * 0.4) * 6), []);
+  const sparkFailed   = useMemo(() => Array.from({ length: 12 }, (_, i) => 2 + Math.abs(Math.sin(i * 0.9)) * 3 + (failedMessages.length % 3)), [failedMessages.length]);
 
   const todayStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
 
   if (loading) {
     return (
       <Layout>
-        <div className="flex flex-col items-center justify-center min-h-[500px] gap-6 relative">
-          <div className="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
-            <div className="w-[400px] h-[400px] bg-primary rounded-full blur-[120px] animate-pulse"></div>
-          </div>
-          <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin shadow-glow"></div>
-          <p className="text-primary font-medium tracking-widest uppercase text-sm animate-pulse">Initializing Dashboard...</p>
-        </div>
+        <DashboardSkeleton />
       </Layout>
     );
   }
@@ -225,8 +230,11 @@ const Dashboard: React.FC = () => {
           <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
           <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/10 rounded-full blur-[120px]" />
           <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] bg-purple-500/5 rounded-full blur-[100px]" />
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 pointer-events-none" />
+          <div className="absolute inset-0 noise-overlay pointer-events-none" />
         </div>
+
+        {/* Floating cursor-aware Spline robot (desktop only) */}
+        <CursorSplineRobot />
 
         <motion.div className="max-w-[1600px] mx-auto space-y-8 relative z-10 p-4 lg:p-8" variants={containerVariants} initial="hidden" animate="visible">
           
