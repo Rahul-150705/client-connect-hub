@@ -3,10 +3,12 @@ import { useSearchParams } from 'react-router-dom';
 import { FaFileContract, FaUser, FaClock, FaCheckCircle, FaPlus, FaEnvelope, FaPhone, FaTimes, FaTrash, FaSearch, FaFilter, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import { policyAPI } from '../services/api';
 import { toast } from 'react-toastify';
+import { showToast } from '../lib/toast';
 import { format } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import Layout from '../components/Layout';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { FileText, Plus } from 'lucide-react';
 
 interface Policy {
   policyId: number;
@@ -37,6 +39,8 @@ const Policies: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [policyToDelete, setPolicyToDelete] = useState<Policy | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   // Search & Advanced Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -84,29 +88,29 @@ const Policies: React.FC = () => {
   const createMutation = useMutation({
     mutationFn: (data: any) => policyAPI.createPolicyWithClient(data),
     onSuccess: () => {
-      toast.success('✅ Policy created successfully!');
+      showToast.success('Creation Successful', 'The new policy has been added to your portfolio.');
       handleCloseModal();
       queryClient.invalidateQueries({ queryKey: ['policies'] });
       queryClient.invalidateQueries({ queryKey: ['dashboardSummary'] });
     },
     onError: (error: any) => {
-      const errorMessage = error.response?.data?.error || 'Failed to create policy';
-      toast.error(errorMessage);
+      const errorMessage = error.response?.data?.error || 'System was unable to create the policy.';
+      showToast.error('Creation Failed', errorMessage);
     }
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => policyAPI.deletePolicy(id),
     onSuccess: () => {
-      toast.success('Policy deleted successfully!');
+      showToast.success('Deletion Successful', 'The policy has been removed from your portfolio.');
       setShowDeleteModal(false);
       setPolicyToDelete(null);
       queryClient.invalidateQueries({ queryKey: ['policies'] });
       queryClient.invalidateQueries({ queryKey: ['dashboardSummary'] });
     },
     onError: (error: any) => {
-      const errorMessage = error.response?.data?.error || 'Failed to delete policy';
-      toast.error(errorMessage);
+      const errorMessage = error.response?.data?.error || 'System was unable to delete the policy.';
+      showToast.error('Deletion Failed', errorMessage);
     }
   });
 
@@ -116,6 +120,11 @@ const Policies: React.FC = () => {
       setSearchParams({});
     }
   }, []);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, searchQuery, advancedFilters]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -202,12 +211,12 @@ const Policies: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      ACTIVE: 'bg-success',
-      EXPIRED: 'bg-destructive',
-      RENEWED: 'bg-info',
-      CANCELLED: 'bg-muted',
+      ACTIVE: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+      EXPIRED: 'bg-red-500/10 text-red-400 border-red-500/20',
+      RENEWED: 'bg-primary/10 text-primary border-primary/20',
+      CANCELLED: 'bg-muted/10 text-muted-foreground border-muted/20',
     };
-    return colors[status] || 'bg-muted';
+    return colors[status] || 'bg-muted/10 text-muted-foreground border-muted/20';
   };
 
   const filteredPolicies = useMemo(() => {
@@ -262,6 +271,12 @@ const Policies: React.FC = () => {
     });
   }, [policies, filter, searchQuery, advancedFilters]);
 
+  const totalPages = Math.ceil(filteredPolicies.length / pageSize);
+  const paginatedPolicies = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredPolicies.slice(start, start + pageSize);
+  }, [filteredPolicies, currentPage]);
+
   const clearAdvancedFilters = () => {
     setAdvancedFilters({
       policyType: '',
@@ -299,17 +314,21 @@ const Policies: React.FC = () => {
     <Layout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-border/50">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">All Policies</h1>
-            <p className="text-muted-foreground mt-1">Track and manage insurance policies</p>
+            <div className="flex items-center gap-2 text-primary font-bold text-[10px] uppercase tracking-[0.2em] mb-2">
+              <FileText className="w-3.5 h-3.5" />
+              <span>Asset Management</span>
+            </div>
+            <h1 className="text-4xl font-extrabold tracking-tight text-white">Policies Portfolio</h1>
+            <p className="text-muted-foreground mt-2 text-sm">Manage, track and audit your full insurance portfolio in one place.</p>
           </div>
           <button
             onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-primary text-white
-              font-medium hover:opacity-90 transition-all duration-200 shadow-glow"
+            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-primary text-white
+              text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/20"
           >
-            <FaPlus /> Add Policy
+            <Plus className="w-4 h-4" /> Add New Policy
           </button>
         </div>
 
@@ -539,21 +558,20 @@ const Policies: React.FC = () => {
           <div className="bg-card rounded-xl border border-border overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-secondary/50">
-                  <tr>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Policy Number</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Client Name</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Contact</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Type</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Premium</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Expiry Date</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Status</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Days Left</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Actions</th>
+                <thead className="bg-secondary/30">
+                  <tr className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest border-b border-border/40">
+                    <th className="px-6 py-4">Policy / ID</th>
+                    <th className="px-6 py-4">Client Details</th>
+                    <th className="px-6 py-4">Category</th>
+                    <th className="px-6 py-4">Premium</th>
+                    <th className="px-6 py-4">Expiry Date</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4">Days Left</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {filteredPolicies.map((policy) => {
+                  {paginatedPolicies.map((policy) => {
                     const daysUntilExpiry = getDaysUntilExpiry(policy.expiryDate);
                     const isExpiringSoon = daysUntilExpiry <= 30 && daysUntilExpiry > 0;
 
@@ -630,6 +648,62 @@ const Policies: React.FC = () => {
                 </tbody>
               </table>
             </div>
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="px-6 py-4 border-t border-border bg-secondary/10 flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  Showing <span className="font-medium text-foreground">{(currentPage - 1) * pageSize + 1}</span> to <span className="font-medium text-foreground">{Math.min(currentPage * pageSize, filteredPolicies.length)}</span> of <span className="font-medium text-foreground">{filteredPolicies.length}</span> results
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-lg border border-border bg-card hover:bg-secondary transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <FaChevronDown className="rotate-90" />
+                  </button>
+                  
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                      if (
+                        totalPages <= 7 ||
+                        page === 1 ||
+                        page === totalPages ||
+                        (page >= currentPage - 1 && page <= currentPage + 1)
+                      ) {
+                        return (
+                          <button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            className={`w-9 h-9 rounded-lg text-sm font-bold transition-all border
+                              ${currentPage === page 
+                                ? 'bg-primary border-primary text-white shadow-glow' 
+                                : 'bg-card border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'}`}
+                          >
+                            {page}
+                          </button>
+                        );
+                      } else if (
+                        (page === 2 && currentPage > 4) ||
+                        (page === totalPages - 1 && currentPage < totalPages - 3)
+                      ) {
+                        return <span key={page} className="px-1 text-muted-foreground">...</span>;
+                      }
+                      return null;
+                    })}
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 rounded-lg border border-border bg-card hover:bg-secondary transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <FaChevronDown className="-rotate-90" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

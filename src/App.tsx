@@ -46,7 +46,7 @@ function AppRoutes() {
   const { isAuthenticated } = useAuth();
 
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         <Route path="/" element={isAuthenticated() ? <Navigate to="/dashboard" /> : <Landing />} />
         <Route path="/login" element={isAuthenticated() ? <Navigate to="/dashboard" /> : <Login />} />
@@ -79,20 +79,17 @@ function AppRoutes() {
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       <ToastContainer
-        position="top-right"
-        autoClose={3000}
+        position="bottom-right"
+        autoClose={4000}
         hideProgressBar={false}
-        newestOnTop={false}
+        newestOnTop={true}
         closeOnClick
         rtl={false}
         pauseOnFocusLoss
         draggable
         pauseOnHover
         theme="dark"
-        toastStyle={{
-          backgroundColor: 'hsl(217, 33%, 17%)',
-          color: 'hsl(210, 40%, 98%)',
-        }}
+        toastClassName="font-bold text-xs tracking-tight"
       />
     </Router>
   );

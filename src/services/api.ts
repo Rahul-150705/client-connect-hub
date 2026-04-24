@@ -80,8 +80,8 @@ export const policyAPI = {
   deletePolicy: (id: number) => api.delete(`/policies/${id}`),
 
   // Manual renewal - mark policy as contacted manually by agent
-  markAsManuallyRenewed: (id: number, notes: string) =>
-    api.post(`/policies/${id}/manual-renew`, { notes }),
+  markAsManuallyRenewed: (id: number, notes: string, renewed: boolean) =>
+    api.post(`/policies/${id}/manual-renew`, { notes, renewed }),
   
   // PDF storage disabled
   // uploadPdf: (file: File, clientEmail: string, policyNumber: string) => {
@@ -138,6 +138,7 @@ export const dashboardAPI = {
   getClaimsDistribution: () => api.get('/dashboard/claims-distribution'),
   getCommunicationStats: () => api.get('/dashboard/communication-stats'),
   getAiInsights: () => api.get('/dashboard/ai-insights'),
+  getProjectedRenewals: (period: number = 30) => api.get(`/dashboard/projected-renewals?period=${period}`),
 };
 
 export default api;

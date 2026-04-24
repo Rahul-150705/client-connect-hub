@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
-  FaSearch, FaBell, FaCalendarAlt, FaEllipsisH, FaCarAlt, FaHome, 
-  FaHeartbeat, FaShieldAlt, FaWhatsapp, FaArrowUp, FaArrowDown, 
-  FaExclamationCircle, FaRobot, FaPlus, FaPaperPlane, FaSyncAlt, FaSms
-} from 'react-icons/fa';
+  LayoutDashboard, ShieldCheck, FileText, Clock, MessageSquare, 
+  AlertTriangle, TrendingUp, TrendingDown, Plus, ChevronRight,
+  Filter, MoreHorizontal, Download, Calendar
+} from 'lucide-react';
 import { policyAPI, messagesAPI, dashboardAPI } from '../services/api';
-import { toast } from 'react-toastify';
 import Layout from '../components/Layout';
 import { motion, type Variants } from 'framer-motion';
 import {
@@ -18,118 +17,23 @@ import { Sparkline } from '../components/premium/Sparkline';
 import { GlassTooltip } from '../components/premium/GlassTooltip';
 import { DashboardSkeleton } from '../components/premium/ShimmerSkeleton';
 
-interface Policy {
-  policyId: number;
-  policyNumber?: string;
-  policyStatus: string;
-  policyType?: string;
-  expiryDate: string;
-  startDate?: string;
-  premium?: number;
-  vehicleType?: string;
-  client?: { fullName?: string; phone?: string; };
-}
-
-interface MessageLog {
-  id: number;
-  clientName?: string;
-  recipientPhone?: string;
-  messageContent?: string;
-  status: string;
-  channel: string;
-  sentAt?: string;
-}
-
-interface DashboardSummary {
-  totalPolicies: number;
-  policiesGrowthPercentage: number;
-  expiringSoonCount: number;
-  renewalRate: number;
-  failedMessagesCount: number;
-}
-
-interface ChartData {
-  name: string;
-  value: number;
-}
-
-interface CommunicationStats {
-  messagesSentToday: number;
-  whatsappSuccessRate: number;
-  smsFallbackCount: number;
-  overallFailureRate: number;
-}
-
-interface AiInsight {
-  title: string;
-  description: string;
-}
-
-// ── Cyber Palette ─────────────────────────────────────────────
-const DONUT_COLORS = ['#2BC8B7', '#9B99FE', '#FF6B35', '#FF5E7E', '#F59E0B', '#10B981'];
+// ── Professional Palette ──────────────────────────────────────
+const DONUT_COLORS = ['#3b82f6', '#6366f1', '#94a3b8', '#475569', '#1e293b', '#0f172a'];
 
 const CHART_TOOLTIP_STYLE = {
-  backgroundColor: 'rgba(10, 10, 10, 0.95)',
-  backdropFilter: 'blur(12px)',
-  border: '1px solid rgba(155, 153, 254, 0.3)',
-  borderRadius: '12px',
-  color: '#e2e8f0',
-  fontSize: '13px',
-  padding: '10px 14px',
-  boxShadow: '0 10px 40px -10px rgba(0,0,0,0.5)',
+  backgroundColor: '#0f172a',
+  border: '1px solid rgba(255, 255, 255, 0.1)',
+  borderRadius: '8px',
+  color: '#fff',
+  fontSize: '12px',
+  padding: '12px',
+  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
 };
 
-const getMonthLabel = (date: Date) =>
-  date.toLocaleString('default', { month: 'short', year: '2-digit' });
-
-const getTypeIcon = (type?: string) => {
-  const t = (type || '').toLowerCase();
-  if (t.includes('auto') || t.includes('vehicle') || t.includes('car') || t.includes('motor')) return <FaCarAlt className="text-blue-400" />;
-  if (t.includes('home') || t.includes('property')) return <FaHome className="text-orange-400" />;
-  if (t.includes('life') || t.includes('health')) return <FaHeartbeat className="text-pink-400" />;
-  return <FaShieldAlt className="text-primary" />;
-};
-
-const getStatusBadge = (status: string) => {
-  if (status === 'ACTIVE') return <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">Active</span></span>;
-  if (status === 'EXPIRED') return <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500"></span><span className="text-[11px] font-semibold text-red-400 uppercase tracking-wider">Expired</span></span>;
-  return <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-500"></span><span className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider">Pending</span></span>;
-};
-
-const formatDate = (d?: string) => {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' });
-};
-
-const formatCurrency = (n?: number) => {
-  if (!n && n !== 0) return '—';
-  return `$${n.toLocaleString()}`;
-};
-
-const getDaysLeft = (expiryDate: string) => {
-  const today = new Date();
-  const exp = new Date(expiryDate);
-  const diffTime = Math.max(0, exp.getTime() - today.getTime());
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-};
-
-const getDaysLeftColor = (days: number) => {
-  if (days <= 3) return 'text-red-500 font-bold';
-  if (days <= 14) return 'text-amber-500 font-semibold';
-  return 'text-emerald-500';
-};
-
-
-
-// ... interfaces
-
-// ── Component ────────────────────────────────────────────────
 const Dashboard: React.FC = () => {
-  const [chartFilter, setChartFilter] = useState('30d');
+  const [period, setPeriod] = useState(30);
   const navigate = useNavigate();
-  const period = parseInt(chartFilter.replace('d', ''));
 
-  // Use queries for each data requirement
   const policiesQuery = useQuery({
     queryKey: ['policies'],
     queryFn: () => policyAPI.getAllMyPolicies().then(res => res.data),
@@ -150,518 +54,426 @@ const Dashboard: React.FC = () => {
     queryFn: () => dashboardAPI.getClaimsDistribution().then(res => res.data),
   });
 
-  const statsQuery = useQuery({
-    queryKey: ['commStats'],
+  const commStatsQuery = useQuery({
+    queryKey: ['communicationStats'],
     queryFn: () => dashboardAPI.getCommunicationStats().then(res => res.data),
   });
 
-  const insightsQuery = useQuery({
+  const aiInsightsQuery = useQuery({
     queryKey: ['aiInsights'],
     queryFn: () => dashboardAPI.getAiInsights().then(res => res.data),
   });
 
-  const loading = policiesQuery.isLoading || messageLogsQuery.isLoading || summaryQuery.isLoading;
+  const projectedRenewalsQuery = useQuery({
+    queryKey: ['projectedRenewals', period],
+    queryFn: () => dashboardAPI.getProjectedRenewals(period).then(res => res.data),
+  });
+
+  const loading = policiesQuery.isLoading || messageLogsQuery.isLoading || summaryQuery.isLoading || projectedRenewalsQuery.isLoading;
 
   const policies = policiesQuery.data || [];
   const messageLogs = messageLogsQuery.data || [];
   const summary = summaryQuery.data;
   const donutData = distributionQuery.data || [];
-  const commStats = statsQuery.data;
-  const insights = insightsQuery.data || [];
-
-  const activePolicies = useMemo(() => policies.filter(p => p.policyStatus === 'ACTIVE'), [policies]);
+  const commStats = commStatsQuery.data;
+  const aiInsights = aiInsightsQuery.data || [];
+  const projectedRenewals = projectedRenewalsQuery.data || [];
   
-  const expiringSoon = useMemo(() => policies.filter(p => {
-    if (p.policyStatus !== 'ACTIVE') return false;
-    const daysLeft = getDaysLeft(p.expiryDate);
-    return daysLeft <= 14;
-  }), [policies]);
-
-  const urgentExpiring = useMemo(() => policies.filter(p => {
-    if (p.policyStatus !== 'ACTIVE') return false;
-    const daysLeft = getDaysLeft(p.expiryDate);
-    return daysLeft <= 3;
-  }), [policies]);
+  const stats = {
+    total: summary?.totalPolicies || 0,
+    expiring: summary?.expiringSoonCount || 0,
+    renewalRate: summary?.renewalRate || 0,
+    failedCount: summary?.failedMessagesCount || 0,
+    activePremium: summary?.activePremium || 0,
+    growth: summary?.policiesGrowthPercentage || 0
+  };
 
   const failedMessages = useMemo(() => messageLogs.filter(m => m.status === 'FAILED'), [messageLogs]);
 
-  // Area chart data
   const areaChartData = useMemo(() => {
-    const today = new Date();
-    const buckets: Record<string, number> = {};
-    for (let i = 0; i < 6; i++) {
-      const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
-      buckets[getMonthLabel(d)] = 0;
+    if (projectedRenewals.length > 0) {
+      return projectedRenewals.map(item => ({
+        label: new Date(item.name).toLocaleDateString([], { month: 'short', day: 'numeric' }),
+        policies: item.value
+      }));
     }
-    const sixMonths = new Date(today.getFullYear(), today.getMonth() + 6, 0);
-    policies.forEach(p => {
-      if (p.policyStatus !== 'ACTIVE') return;
-      const exp = new Date(p.expiryDate);
-      if (exp < today || exp > sixMonths) return;
-      const key = getMonthLabel(exp);
-      if (key in buckets) buckets[key]++;
-    });
-    return Object.entries(buckets).map(([month, count]) => ({ month, policies: count }));
-  }, [policies]);
+    // Fallback labels if no data
+    const labels = period === 7 ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] : 
+                  period === 30 ? ['Week 1', 'Week 2', 'Week 3', 'Week 4'] :
+                  ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    return labels.map(label => ({
+      label,
+      policies: 0
+    }));
+  }, [projectedRenewals, period]);
 
-  // Recent messages (last 6)
   const recentMessages = useMemo(() => {
     return [...messageLogs]
       .sort((a, b) => new Date(b.sentAt || 0).getTime() - new Date(a.sentAt || 0).getTime())
-      .slice(0, 6);
+      .slice(0, 5);
   }, [messageLogs]);
 
-  const containerVariants: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.08 } } };
-  const itemVariants: Variants = { hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 24 } } };
+  const containerVariants: Variants = { 
+    hidden: { opacity: 0 }, 
+    visible: { opacity: 1, transition: { staggerChildren: 0.05 } } 
+  };
 
-  // Deterministic sparkline samples derived from data — purely visual.
-  const sparkPolicies = useMemo(() => Array.from({ length: 12 }, (_, i) => 8 + Math.sin(i * 0.7) * 3 + (policies.length % 5)), [policies.length]);
-  const sparkExpiring = useMemo(() => Array.from({ length: 12 }, (_, i) => 4 + Math.cos(i * 0.5) * 2 + (expiringSoon.length % 4)), [expiringSoon.length]);
-  const sparkRenewal  = useMemo(() => Array.from({ length: 12 }, (_, i) => 60 + Math.sin(i * 0.4) * 6), []);
-  const sparkFailed   = useMemo(() => Array.from({ length: 12 }, (_, i) => 2 + Math.abs(Math.sin(i * 0.9)) * 3 + (failedMessages.length % 3)), [failedMessages.length]);
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } }
+  };
 
-  const todayStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+  const sparkData = [10, 15, 8, 12, 18, 14, 20, 18, 25];
 
-  if (loading) {
-    return (
-      <Layout>
-        <DashboardSkeleton />
-      </Layout>
-    );
-  }
+  if (loading) return <Layout><DashboardSkeleton /></Layout>;
 
   return (
     <Layout>
-      <div className="relative min-h-screen text-foreground overflow-x-hidden">
-        <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden">
-          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/5 rounded-full blur-[120px]" />
-          <div className="absolute inset-0 noise-overlay pointer-events-none" />
-        </div>
-
-        <motion.div className="max-w-[1600px] mx-auto space-y-8 relative z-10 p-4 lg:p-8" variants={containerVariants} initial="hidden" animate="visible">
-          
-          {/* ═══ TOP HEADER & QUICK ACTIONS ═══ */}
-          <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2">
+      <div className="relative min-h-screen text-foreground bg-background">
+        <motion.div 
+          className="max-w-[1600px] mx-auto p-6 lg:p-10 space-y-10" 
+          variants={containerVariants} 
+          initial="hidden" 
+          animate="visible"
+        >
+          {/* ═══ HEADER ═══ */}
+          <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b border-border/50">
             <div>
-              <h1 className="text-4xl font-extrabold tracking-tight text-white mb-2 bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60">Dashboard</h1>
-              <div className="flex items-center gap-3 text-sm">
-                <span className="flex items-center gap-1.5 text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full border border-emerald-400/20">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live System
-                </span>
-                <span className="text-muted-foreground font-medium">{todayStr}</span>
+              <div className="flex items-center gap-2 text-primary font-bold text-[10px] uppercase tracking-[0.2em] mb-3">
+                <LayoutDashboard className="w-3.5 h-3.5" />
+                <span>Enterprise Dashboard</span>
               </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative mr-2 hidden lg:block">
-                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs" />
-                <input type="text" placeholder="Search policies..." className="bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 w-64 transition-all" />
-              </div>
-              <button 
-                onClick={() => navigate('/policies')}
-                className="flex items-center gap-2 bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all shadow-lg"
-              >
-                <FaPlus className="text-primary text-xs" /> Add Policy
-              </button>
-              <button 
-                onClick={() => navigate('/messages')}
-                className="flex items-center gap-2 bg-gradient-primary text-white shadow-glow text-sm font-bold px-6 py-2.5 rounded-xl hover:opacity-90 active:scale-95 transition-all"
-              >
-                <FaPaperPlane className="text-xs" /> Bulk Reminder
-              </button>
-            </div>
-          </motion.div>
-
-          {/* ═══ 1. SMART KPI ROW ═══ */}
-          <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-            {/* Total Policies */}
-            <div className="group relative overflow-hidden bg-white/5 backdrop-blur-2xl border border-white/10 rounded-2xl p-6 hover:border-primary/50 hover:bg-white/[0.08] transition-all duration-500 shadow-xl">
-              <div className="flex justify-between items-start mb-4">
-                <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Total Policies</p>
-                <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                  <FaShieldAlt className="text-lg" />
-                </div>
-              </div>
-              <div className="flex items-end justify-between">
-                <h3 className="text-4xl font-black text-white">{summary?.totalPolicies || 0}</h3>
-                <div className={`flex items-center gap-1 ${summary?.policiesGrowthPercentage && summary.policiesGrowthPercentage >= 0 ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' : 'text-red-400 bg-red-400/10 border-red-400/20'} px-2.5 py-1 rounded-full border text-[10px] font-bold`}>
-                  {summary?.policiesGrowthPercentage && summary.policiesGrowthPercentage >= 0 ? <FaArrowUp /> : <FaArrowDown />} 
-                  {Math.abs(summary?.policiesGrowthPercentage || 0).toFixed(1)}%
-                </div>
-              </div>
-              <div className="mt-3 -mb-1"><Sparkline data={sparkPolicies} color="#2BC8B7" width={200} height={32} /></div>
+              <h1 className="text-4xl font-extrabold tracking-tight text-white">
+                Portfolio Performance
+              </h1>
+              <p className="text-muted-foreground mt-2 text-sm max-w-lg">
+                Overview of your insurance portfolio, renewal tracking, and automated communication performance.
+              </p>
             </div>
             
-            {/* Expiring Soon */}
-            <div className={`group relative overflow-hidden bg-white/5 backdrop-blur-2xl border ${summary?.expiringSoonCount && summary.expiringSoonCount > 10 ? 'border-red-500/30 bg-red-500/5' : 'border-white/10'} rounded-2xl p-6 hover:border-red-500/50 hover:bg-white/[0.08] transition-all duration-500 shadow-xl`}>
-              <div className="flex justify-between items-start mb-4">
-                <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Expiring Soon</p>
-                <div className={`p-2 rounded-lg ${summary?.expiringSoonCount && summary.expiringSoonCount > 10 ? 'bg-red-500/20 text-red-500' : 'bg-amber-500/10 text-amber-500'}`}>
-                  <FaCalendarAlt className="text-lg" />
-                </div>
-              </div>
-              <div className="flex items-end justify-between">
-                <h3 className="text-4xl font-black text-white">{summary?.expiringSoonCount || 0}</h3>
-                {summary?.expiringSoonCount && summary.expiringSoonCount > 10 ? (
-                  <div className="flex items-center gap-1.5 text-red-400 bg-red-400/10 px-3 py-1 rounded-full border border-red-400/20 text-[10px] font-bold animate-pulse">
-                    🔴 HIGH RISK
-                  </div>
-                ) : (
-                  <div className="text-muted-foreground text-[10px] font-bold bg-white/5 px-3 py-1 rounded-full border border-white/10 uppercase">Manageable</div>
-                )}
-              </div>
-              <div className="mt-3 -mb-1"><Sparkline data={sparkExpiring} color="#f59e0b" width={200} height={32} /></div>
-            </div>
-
-            {/* Renewal Rate */}
-            <div className="group relative overflow-hidden bg-white/5 backdrop-blur-2xl border border-white/10 rounded-2xl p-6 hover:border-accent/50 hover:bg-white/[0.08] transition-all duration-500 shadow-xl">
-              <div className="flex justify-between items-start mb-4">
-                <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Renewal Rate</p>
-                <div className="p-2 rounded-lg bg-accent/10 text-accent">
-                  <FaSyncAlt className="text-lg" />
-                </div>
-              </div>
-              <div className="flex items-end justify-between">
-                <h3 className="text-4xl font-black text-white">{(summary?.renewalRate || 0).toFixed(0)}<span className="text-2xl text-white/40">%</span></h3>
-                <div className="flex items-center gap-1.5 text-accent bg-accent/10 px-3 py-1 rounded-full border border-accent/20 text-[10px] font-bold">
-                   OPTIMIZED
-                </div>
-              </div>
-              <div className="mt-3 -mb-1"><Sparkline data={sparkRenewal} color="#9B99FE" width={200} height={32} /></div>
-            </div>
-
-            {/* Failed Messages */}
-            <div className={`group relative overflow-hidden bg-white/5 backdrop-blur-2xl border ${summary?.failedMessagesCount && summary.failedMessagesCount > 0 ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/10'} rounded-2xl p-6 hover:border-amber-500/50 hover:bg-white/[0.08] transition-all duration-500 shadow-xl`}>
-              <div className="flex justify-between items-start mb-4">
-                <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Failed Delivery</p>
-                <div className={`p-2 rounded-lg ${summary?.failedMessagesCount && summary.failedMessagesCount > 0 ? 'bg-amber-500/20 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-                  <FaExclamationCircle className="text-lg" />
-                </div>
-              </div>
-              <div className="flex items-end justify-between">
-                <h3 className="text-4xl font-black text-white">{summary?.failedMessagesCount || 0}</h3>
-                {summary?.failedMessagesCount && summary.failedMessagesCount > 0 ? (
-                  <div className="flex items-center gap-1.5 text-amber-400 bg-amber-400/10 px-3 py-1 rounded-full border border-amber-400/20 text-[10px] font-bold animate-bounce">
-                    ATTENTION
-                  </div>
-                ) : (
-                  <div className="text-emerald-400 bg-emerald-400/10 px-3 py-1 rounded-full border border-emerald-400/20 text-[10px] font-bold uppercase">All Clear</div>
-                )}
-              </div>
-              <div className="mt-3 -mb-1"><Sparkline data={sparkFailed} color="#ef4444" width={200} height={32} /></div>
-            </div>
-          </motion.div>
-
-          {/* ═══ 2. ATTENTION REQUIRED & AI INSIGHTS ═══ */}
-          <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            {/* Attention Required */}
-            <div className="bg-red-950/20 backdrop-blur-xl border border-red-900/50 rounded-2xl p-6 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full blur-[40px] pointer-events-none"></div>
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-8 h-8 rounded-lg bg-red-500/20 text-red-500 flex items-center justify-center">
-                  <FaExclamationCircle />
-                </div>
-                <h3 className="text-lg font-bold text-white tracking-tight">Attention Required</h3>
-              </div>
-              
-              <div className="space-y-3">
-                {urgentExpiring.length > 0 ? (
-                  urgentExpiring.slice(0, 3).map(p => (
-                    <div key={p.policyId} className="flex items-center justify-between bg-black/40 border border-red-900/30 p-3 rounded-xl">
-                      <div>
-                        <p className="text-sm font-semibold text-white">Policy <span className="font-mono text-xs">{p.policyNumber || p.policyId}</span> expiring in {getDaysLeft(p.expiryDate)} days</p>
-                        <p className="text-xs text-muted-foreground">{p.client?.fullName} • {p.client?.phone || 'No phone'}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => navigate('/policies')} className="px-3 py-1.5 bg-card/60 hover:bg-card border border-border text-xs font-medium rounded-lg transition-colors text-white">View</button>
-                        <button onClick={() => navigate('/messages')} className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/20 text-xs font-medium rounded-lg transition-colors">Contact Now</button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="bg-black/40 border border-border/30 p-4 rounded-xl text-center">
-                    <p className="text-sm text-emerald-400 font-medium">No urgent expirations in the next 3 days. Good job!</p>
-                  </div>
-                )}
-                {failedMessages.length > 0 && (
-                  <div className="flex items-center justify-between bg-black/40 border border-amber-900/30 p-3 rounded-xl">
-                    <div>
-                      <p className="text-sm font-semibold text-white">{failedMessages.length} message deliveries failed</p>
-                      <p className="text-xs text-muted-foreground">Manual intervention required</p>
-                    </div>
-                    <button onClick={() => navigate('/messages')} className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/20 text-xs font-medium rounded-lg transition-colors">Review Logs</button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* AI Insights Panel */}
-            <div className="bg-primary/5 backdrop-blur-xl border border-primary/20 rounded-2xl p-6 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-[40px] pointer-events-none"></div>
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center">
-                  <FaRobot />
-                </div>
-                <h3 className="text-lg font-bold text-white tracking-tight">AI Insights</h3>
-              </div>
-              
-              <ul className="space-y-4">
-                {insights.map((insight, idx) => (
-                  <li key={idx} className="flex gap-3">
-                    <div className="mt-1 w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0"></div>
-                    <div>
-                      <p className="text-sm font-medium text-white mb-0.5">{insight.title}</p>
-                      <p className="text-xs text-muted-foreground">{insight.description}</p>
-                    </div>
-                  </li>
-                ))}
-                {insights.length === 0 && (
-                  <p className="text-sm text-muted-foreground italic">No insights available yet.</p>
-                )}
-              </ul>
-            </div>
-            
-          </motion.div>
-
-          {/* ═══ 3. POLICY ANALYTICS ═══ */}
-          <motion.div variants={itemVariants} className="bg-card/40 backdrop-blur-xl border border-border/50 rounded-2xl p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-              <div>
-                <h3 className="text-lg font-bold text-white tracking-tight">Policy Analytics</h3>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-sm text-red-400 flex items-center gap-1"><FaArrowDown className="text-[10px]"/> 12%</span>
-                  <span className="text-xs text-muted-foreground">drop in renewals this week</span>
-                </div>
-              </div>
-              <div className="flex bg-black/40 border border-border/50 rounded-lg p-1">
-                {['7d', '30d', '90d'].map(f => (
+            <div className="flex items-center gap-3">
+              <div className="flex bg-secondary/30 p-1 rounded-lg border border-border/50">
+                {[7, 30, 90].map(p => (
                   <button 
-                    key={f}
-                    onClick={() => setChartFilter(f)}
-                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${chartFilter === f ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-white'}`}
+                    key={p}
+                    onClick={() => setPeriod(p)}
+                    className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${period === p ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-white'}`}
                   >
-                    Last {f}
+                    {p}D
                   </button>
                 ))}
               </div>
-            </div>
-
-            <div className="h-[280px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={areaChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="policyGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2BC8B7" stopOpacity={0.4}/>
-                      <stop offset="95%" stopColor="#2BC8B7" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} allowDecimals={false} />
-                  <Tooltip content={<GlassTooltip />} cursor={{ stroke: 'rgba(43,200,183,0.3)', strokeWidth: 1 }} />
-                  <Area type="monotone" dataKey="policies" name="Active Policies" stroke="#2BC8B7" strokeWidth={3} fillOpacity={1} fill="url(#policyGrad)" activeDot={{ r: 6, fill: '#fff', stroke: '#2BC8B7', strokeWidth: 2 }} />
-                </AreaChart>
-              </ResponsiveContainer>
+              <button 
+                onClick={() => navigate('/policies?action=add')}
+                className="flex items-center gap-2 bg-primary text-white px-5 py-2 rounded-lg text-sm font-bold hover:opacity-90 transition-all"
+              >
+                <Plus className="w-4 h-4" /> New Policy
+              </button>
             </div>
           </motion.div>
 
-          {/* ═══ 5. ACTIVE POLICIES TABLE ═══ */}
-          <motion.div variants={itemVariants} className="bg-card/40 backdrop-blur-xl border border-border/50 rounded-2xl overflow-hidden">
-            <div className="p-5 border-b border-border/50 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white tracking-tight">Active Policies</h3>
-              <button onClick={() => navigate('/policies')} className="text-xs text-primary hover:text-primary/80 font-medium">View All</button>
-            </div>
-            
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-black/20 text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/50">
-                    <th className="px-5 py-3 font-semibold">Policy Name/ID</th>
-                    <th className="px-5 py-3 font-semibold">Customer</th>
-                    <th className="px-5 py-3 font-semibold">Expiry Date</th>
-                    <th className="px-5 py-3 font-semibold">Days Left</th>
-                    <th className="px-5 py-3 font-semibold">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/20">
-                  {policies.slice(0, 5).map(pol => {
-                    const daysLeft = getDaysLeft(pol.expiryDate);
-                    return (
-                      <tr key={pol.policyId} className="hover:bg-white/[0.02] transition-colors group">
-                        <td className="px-5 py-3.5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-xl bg-card border border-border flex items-center justify-center text-xs">
-                              {getTypeIcon(pol.policyType || pol.vehicleType)}
-                            </div>
-                            <div>
-                              <p className="text-sm font-semibold text-white">{pol.policyType || pol.vehicleType || 'General'}</p>
-                              <p className="text-xs font-mono text-muted-foreground">{pol.policyNumber || `P${String(pol.policyId).padStart(4, '0')}`}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <p className="text-sm font-medium text-foreground">{pol.client?.fullName || '—'}</p>
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <p className="text-sm text-foreground">{formatDate(pol.expiryDate)}</p>
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <p className={`text-sm ${getDaysLeftColor(daysLeft)}`}>
-                            {daysLeft} days
-                          </p>
-                        </td>
-                        <td className="px-5 py-3.5">
-                          {getStatusBadge(pol.policyStatus)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {policies.length === 0 && (
-                    <tr><td colSpan={5} className="px-5 py-8 text-center text-muted-foreground text-sm">No active policies found.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </motion.div>
+          {/* ═══ STATS GRID ═══ */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { label: 'Total Portfolio', value: stats.total, icon: ShieldCheck, color: 'text-primary', sparkColor: '#3b82f6', trend: `${stats.growth >= 0 ? '+' : ''}${stats.growth.toFixed(1)}%` },
+              { label: 'Active Premium', value: `₹${(stats.activePremium / 100000).toFixed(1)}L`, icon: FileText, color: 'text-emerald-400', sparkColor: '#10b981', trend: '+8.4%' },
+              { label: 'Expiring Soon', value: stats.expiring, icon: Clock, color: 'text-warning', sparkColor: '#f59e0b', trend: stats.expiring > 10 ? 'Critical' : 'Stable' },
+              { label: 'Renewal Rate', value: `${stats.renewalRate.toFixed(1)}%`, icon: TrendingUp, color: 'text-indigo-400', sparkColor: '#6366f1', trend: 'Target 95%' },
+            ].map((stat, i) => (
+              <motion.div 
+                key={i}
+                variants={itemVariants}
+                className="bg-card border border-border/40 rounded-xl p-6 transition-all hover:border-border/80"
+              >
+                <div className="flex justify-between items-start mb-6">
+                  <div className={`w-10 h-10 rounded-lg bg-secondary flex items-center justify-center ${stat.color}`}>
+                    <stat.icon className="w-5 h-5" />
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full bg-secondary border border-border/50 ${stat.trend.includes('+') ? 'text-emerald-400' : 'text-warning'}`}>
+                    {stat.trend}
+                  </span>
+                </div>
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">{stat.label}</p>
+                <h2 className="text-3xl font-bold text-white mt-1">{stat.value}</h2>
+                <div className="mt-6">
+                  <Sparkline data={sparkData} color={stat.sparkColor} width={140} height={20} fill={false} />
+                </div>
+              </motion.div>
+            ))}
+          </div>
 
-          {/* ═══ BOTTOM ROW ═══ */}
-          <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* 6. Claims / Policy Distribution */}
-            <div className="bg-card/40 backdrop-blur-xl border border-border/50 rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white tracking-tight mb-6">Policy Distribution</h3>
-              <div className="flex items-center justify-center mb-6">
-                {donutData.length === 0 ? (
-                  <span className="text-muted-foreground/60 text-sm py-10">No data available.</span>
-                ) : (
-                  <ResponsiveContainer width="100%" height={180}>
+          {/* ═══ MAIN ANALYTICS ═══ */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <motion.div variants={itemVariants} className="lg:col-span-2 bg-card border border-border/40 rounded-xl p-8">
+              <div className="flex items-center justify-between mb-10">
+                <div>
+                  <h3 className="text-lg font-bold text-white">Projected Renewals</h3>
+                  <p className="text-xs text-muted-foreground mt-1">Expected policy expirations for the selected period</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-primary/20 border border-primary/50" />
+                    <span className="text-[11px] font-bold text-muted-foreground">Expiring</span>
+                  </div>
+                  <button className="p-2 hover:bg-secondary rounded-lg transition-all text-muted-foreground">
+                    <Download className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              
+              <div className="h-[360px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={areaChartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.02)" />
+                    <XAxis 
+                      dataKey="label" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }} 
+                      dy={15} 
+                    />
+                    <YAxis 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }} 
+                    />
+                    <Tooltip 
+                      contentStyle={CHART_TOOLTIP_STYLE}
+                      cursor={{ stroke: 'rgba(255, 255, 255, 0.05)', strokeWidth: 2 }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="policies" 
+                      stroke="#3b82f6" 
+                      strokeWidth={2} 
+                      fillOpacity={1} 
+                      fill="url(#chartGrad)" 
+                      activeDot={{ r: 4, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }} 
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </motion.div>
+
+            <motion.div variants={itemVariants} className="bg-card border border-border/40 rounded-xl p-8 flex flex-col">
+              <h3 className="text-lg font-bold text-white mb-2">Portfolio Mix</h3>
+              <p className="text-xs text-muted-foreground mb-10">Breakdown by asset category</p>
+              
+              <div className="flex-1 flex flex-col justify-center">
+                <div className="h-[220px] w-full relative">
+                  <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={donutData} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={2} dataKey="value" stroke="none">
-                        {donutData.map((_e, idx) => (
-                          <Cell key={`c-${idx}`} fill={DONUT_COLORS[idx % DONUT_COLORS.length]} />
+                      <Pie
+                        data={donutData}
+                        innerRadius={70}
+                        outerRadius={95}
+                        paddingAngle={4}
+                        dataKey="value"
+                        stroke="none"
+                      >
+                        {donutData.map((_e, i) => (
+                          <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip content={<GlassTooltip valueSuffix="" />} />
+                      <Tooltip />
                     </PieChart>
                   </ResponsiveContainer>
-                )}
-              </div>
-              
-              <div className="space-y-3">
-                {donutData.slice(0, 4).map((d, i) => {
-                  const total = donutData.reduce((s, x) => s + x.value, 0);
-                  const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
-                  return (
-                    <div key={d.name} className="flex items-center justify-between text-sm">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-3xl font-bold text-white">{stats.total}</span>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Total Assets</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-y-4 gap-x-6 mt-10">
+                  {donutData.slice(0, 4).map((item, i) => (
+                    <div key={i} className="flex flex-col gap-1">
                       <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: DONUT_COLORS[i % DONUT_COLORS.length] }}></span>
-                        <span className="text-muted-foreground">{d.name}</span>
+                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                        <span className="text-[11px] font-bold text-muted-foreground uppercase truncate">{item.name}</span>
                       </div>
-                      <span className="font-semibold text-white">{pct}%</span>
+                      <span className="text-lg font-bold text-white ml-3.5">{item.value}</span>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
-            </div>
+            </motion.div>
+          </div>
 
-            {/* 7. Communication Analytics */}
-            <div className="bg-card/40 backdrop-blur-xl border border-border/50 rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white tracking-tight mb-6">Comm Analytics</h3>
-              
-              <div className="space-y-6">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-muted-foreground">Messages Sent Today</span>
-                    <span className="font-bold text-white">{commStats?.messagesSentToday || 0}</span>
+          {/* ═══ ACTIVITY & ALERTS ═══ */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <motion.div variants={itemVariants} className="lg:col-span-2 bg-card border border-border/40 rounded-xl overflow-hidden">
+              <div className="px-8 py-6 border-b border-border/40 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-white">Recent Activity</h3>
+                <div className="flex items-center gap-2">
+                  <button className="p-2 hover:bg-secondary rounded-lg transition-all text-muted-foreground">
+                    <Filter className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => navigate('/messages')} className="text-xs font-bold text-primary hover:underline">View All</button>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest border-b border-border/40 bg-secondary/20">
+                      <th className="px-8 py-4">Client</th>
+                      <th className="px-8 py-4">Policy</th>
+                      <th className="px-8 py-4">Channel</th>
+                      <th className="px-8 py-4">Status</th>
+                      <th className="px-8 py-4 text-right">Time</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/20">
+                    {recentMessages.map((msg, i) => (
+                      <tr key={i} className="hover:bg-secondary/10 transition-all group">
+                        <td className="px-8 py-4 text-sm font-bold text-white">{msg.clientName || 'N/A'}</td>
+                        <td className="px-8 py-4 text-[11px] font-mono text-muted-foreground">POL-{msg.policyNumber || '0000'}</td>
+                        <td className="px-8 py-4">
+                          <span className="text-[10px] font-bold bg-secondary px-2 py-1 rounded border border-border/50 uppercase">{msg.channel}</span>
+                        </td>
+                        <td className="px-8 py-4">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-1.5 h-1.5 rounded-full ${msg.status === 'SENT' ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.4)]' : 'bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.4)]'}`} />
+                            <span className={`text-[11px] font-bold ${msg.status === 'SENT' ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {msg.status === 'SENT' ? 'Delivered' : 'Failed'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-8 py-4 text-right text-xs text-muted-foreground font-medium">
+                          {new Date(msg.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </motion.div>
+
+            <motion.div variants={itemVariants} className="space-y-6">
+              {/* Communication Performance */}
+              <div className="bg-card border border-border/40 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-sm font-bold text-white uppercase tracking-widest">Comm. Performance</h3>
+                  <MessageSquare className="w-4 h-4 text-primary" />
+                </div>
+                <div className="space-y-5">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[11px] font-bold uppercase tracking-wider">
+                      <span className="text-muted-foreground">WhatsApp Success</span>
+                      <span className="text-emerald-400">{(commStats?.whatsappSuccessRate || 0).toFixed(1)}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${commStats?.whatsappSuccessRate || 0}%` }}
+                        className="h-full bg-emerald-400"
+                      />
+                    </div>
                   </div>
-                  <div className="w-full bg-black/50 rounded-full h-2">
-                    <div className="bg-primary h-2 rounded-full" style={{ width: `${Math.min(100, (commStats?.messagesSentToday || 0) * 10)}%` }}></div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-3 rounded-lg bg-secondary/30 border border-border/30">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Sent Today</p>
+                      <p className="text-lg font-bold text-white">{commStats?.messagesSentToday || 0}</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-secondary/30 border border-border/30">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">SMS Fallback</p>
+                      <p className="text-lg font-bold text-white">{commStats?.smsFallbackCount || 0}</p>
+                    </div>
                   </div>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-black/30 border border-border/50 p-4 rounded-xl">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-tight mb-1">WhatsApp Success</p>
-                    <p className="text-2xl font-bold text-emerald-400">{(commStats?.whatsappSuccessRate || 0).toFixed(0)}%</p>
+              {/* AI Insights */}
+              <div className="bg-indigo-950/20 border border-indigo-500/20 rounded-xl p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+                    <TrendingUp className="w-5 h-5" />
                   </div>
-                  <div className="bg-black/30 border border-border/50 p-4 rounded-xl">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-tight mb-1">SMS Fallback</p>
-                    <p className="text-2xl font-bold text-amber-400">{commStats?.smsFallbackCount || 0}</p>
-                  </div>
-                </div>
-
-                <div className={`flex items-center gap-3 p-3 ${commStats?.overallFailureRate && commStats.overallFailureRate > 10 ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20'} border rounded-xl text-sm`}>
-                  <div className={commStats?.overallFailureRate && commStats.overallFailureRate > 10 ? 'text-red-500' : 'text-emerald-500'}><FaExclamationCircle /></div>
                   <div>
-                    <span className={commStats?.overallFailureRate && commStats.overallFailureRate > 10 ? 'text-red-400 font-semibold block' : 'text-emerald-400 font-semibold block'}>
-                      Failure Rate: {(commStats?.overallFailureRate || 0).toFixed(1)}%
-                    </span>
-                    <span className="text-muted-foreground text-[10px]">
-                      {commStats?.overallFailureRate && commStats.overallFailureRate > 10 ? 'Slightly above average today' : 'System performing optimally'}
-                    </span>
+                    <h3 className="text-lg font-bold text-white">AI Insights</h3>
+                    <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mt-1">Predictive Analytics</p>
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* 8. Recent Activity Feed */}
-            <div className="bg-card/40 backdrop-blur-xl border border-border/50 rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white tracking-tight mb-6">Recent Activity</h3>
-              
-              <div className="relative">
-                {/* Timeline line */}
-                <div className="absolute left-3.5 top-2 bottom-2 w-[1px] bg-border/50"></div>
                 
-                <div className="space-y-6">
-                  {/* Activity Item 1 */}
-                  <div className="relative flex gap-4">
-                    <div className="w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 z-10 shrink-0">
-                      <FaWhatsapp className="text-[10px]" />
+                <div className="space-y-3">
+                  {aiInsights.map((insight, i) => (
+                    <div key={i} className="p-3 rounded-lg bg-white/5 border border-white/5 hover:border-indigo-500/30 transition-all cursor-default group">
+                      <p className="text-xs font-bold text-white group-hover:text-indigo-300 transition-colors">{insight.title}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">{insight.description}</p>
                     </div>
-                    <div>
-                      <p className="text-sm text-foreground"><span className="font-semibold">Reminder sent</span> to Rahul</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">2 min ago via WhatsApp</p>
-                    </div>
-                  </div>
+                  ))}
+                  {aiInsights.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-4 italic">No insights available yet.</p>
+                  )}
+                </div>
+              </div>
 
-                  {/* Activity Item 2 */}
-                  <div className="relative flex gap-4">
-                    <div className="w-7 h-7 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary z-10 shrink-0">
-                      <FaShieldAlt className="text-[10px]" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-foreground"><span className="font-semibold">Policy renewed</span> (ID: 1234)</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">15 min ago • Auto policy</p>
-                    </div>
+              {/* Critical Alerts */}
+              <div className="bg-red-950/20 border border-red-500/20 rounded-xl p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-lg bg-red-500/10 text-red-400 flex items-center justify-center">
+                    <AlertTriangle className="w-5 h-5" />
                   </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">System Alerts</h3>
+                    <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest mt-1">Manual Action Required</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  {failedMessages.length > 0 ? (
+                    <div className="p-4 rounded-lg bg-white/5 border border-white/5">
+                      <p className="text-xs font-bold text-white mb-2">Automated Failure</p>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        {failedMessages.length} renewals failed communication. System has exhausted 3 retries for these clients.
+                      </p>
+                      <button 
+                        onClick={() => navigate('/messages?status=FAILED')}
+                        className="w-full mt-5 py-2.5 bg-red-500 text-white text-[11px] font-bold rounded-lg shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all"
+                      >
+                        Resolve Critical Failures
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="py-10 text-center">
+                      <ShieldCheck className="w-10 h-10 text-emerald-400/30 mx-auto mb-3" />
+                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">System Optimal</p>
+                    </div>
+                  )}
+                </div>
+              </div>
 
-                  {/* Activity Item 3 */}
-                  <div className="relative flex gap-4">
-                    <div className="w-7 h-7 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-400 z-10 shrink-0">
-                      <FaSyncAlt className="text-[10px]" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-foreground"><span className="font-semibold">Retry failed</span> for customer X</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">1 hr ago • Exhausted 3 retries</p>
-                    </div>
+              {/* Maintenance / Info */}
+              <div className="bg-card border border-border/40 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-bold text-white">System Status</h3>
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Operational
                   </div>
-                  
-                  {/* Activity Item 4 */}
-                  <div className="relative flex gap-4">
-                    <div className="w-7 h-7 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 z-10 shrink-0">
-                      <FaSms className="text-[10px]" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-foreground"><span className="font-semibold">SMS Fallback</span> triggered</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">2 hrs ago • Customer Y</p>
-                    </div>
+                </div>
+                <div className="space-y-4 pt-2">
+                  <div className="flex justify-between text-[11px] font-medium border-b border-border/20 pb-3">
+                    <span className="text-muted-foreground">WhatsApp API</span>
+                    <span className="text-white">Active</span>
+                  </div>
+                  <div className="flex justify-between text-[11px] font-medium border-b border-border/20 pb-3">
+                    <span className="text-muted-foreground">SMS Gateway</span>
+                    <span className="text-white">Active</span>
+                  </div>
+                  <div className="flex justify-between text-[11px] font-medium">
+                    <span className="text-muted-foreground">Last Sync</span>
+                    <span className="text-white">Just now</span>
                   </div>
                 </div>
               </div>
-            </div>
-
-          </motion.div>
+            </motion.div>
+          </div>
         </motion.div>
       </div>
     </Layout>

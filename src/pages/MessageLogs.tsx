@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Layout from '../components/Layout';
 import { messagesAPI, policyAPI } from '../services/api';
 import { toast } from 'react-toastify';
+import { showToast } from '../lib/toast';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { X, RotateCcw } from 'lucide-react';
@@ -67,9 +68,9 @@ const MessageLogs: React.FC = () => {
       );
       
       if (updatedLog.status === 'SENT') {
-        toast.success(`✅ Message resent successfully! (Attempt ${updatedLog.retryCount})`);
+        showToast.success('Delivery Success', `Message resent successfully on attempt ${updatedLog.retryCount}.`);
       } else {
-        toast.warning(`⚠️ Retry attempt ${updatedLog.retryCount} failed. ${updatedLog.retryCount >= 3 ? 'Max retries exhausted.' : 'Try again.'}`);
+        showToast.warning('System Alert', `Retry attempt ${updatedLog.retryCount} failed. ${updatedLog.retryCount >= 3 ? 'Maximum retry threshold reached.' : 'Re-attempting delivery...'}`);
       }
     },
     onError: (error: any) => {
@@ -80,10 +81,14 @@ const MessageLogs: React.FC = () => {
   });
 
   const manualRenewalMutation = useMutation({
-    mutationFn: ({ policyId, notes }: { policyId: number, notes: string }) => 
-      policyAPI.markAsManuallyRenewed(policyId, notes),
-    onSuccess: () => {
-      toast.success('✅ Policy marked as MANUAL_RENEWED');
+    mutationFn: ({ policyId, notes, renewed }: { policyId: number, notes: string, renewed: boolean }) => 
+      policyAPI.markAsManuallyRenewed(policyId, notes, renewed),
+    onSuccess: (_, variables) => {
+      if (variables.renewed) {
+        showToast.success('Update Successful', 'Policy has been marked as manually renewed.');
+      } else {
+        showToast.info('Policy Removed', 'Policy has been deleted as client was not renewed.');
+      }
       setShowManualModal(false);
       setManualTarget(null);
       setManualNotes('');
@@ -92,8 +97,8 @@ const MessageLogs: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['dashboardSummary'] });
     },
     onError: (error: any) => {
-      const errorMsg = error.response?.data?.error || 'Failed to mark policy as manually renewed';
-      toast.error(errorMsg);
+      const errorMsg = error.response?.data?.error || 'Action failed';
+      showToast.error('System Error', errorMsg);
     },
     onSettled: () => setSubmittingManual(false)
   });
@@ -109,15 +114,16 @@ const MessageLogs: React.FC = () => {
     setShowManualModal(true);
   };
 
-  const handleManualRenewal = () => {
+  const handleManualAction = (renewed: boolean) => {
     if (!manualTarget || !manualNotes.trim()) {
-      if (!manualNotes.trim()) toast.error('Please add notes');
+      if (!manualNotes.trim()) showToast.warning('Incomplete Action', 'Please provide notes before submitting.');
       return;
     }
     setSubmittingManual(true);
     manualRenewalMutation.mutate({ 
       policyId: manualTarget.policyId, 
-      notes: manualNotes.trim() 
+      notes: manualNotes.trim(),
+      renewed
     });
   };
 
@@ -144,21 +150,21 @@ const MessageLogs: React.FC = () => {
     switch (status) {
       case 'SENT':
         return (
-          <div className="px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/30 flex items-center justify-center">
-            <span className="text-green-400 text-sm font-medium">Sent</span>
+          <div className="px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+            <span className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider">Sent</span>
           </div>
         );
       case 'PENDING':
         return (
-          <div className="px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center">
-            <span className="text-yellow-400 text-sm font-medium">Pending</span>
+          <div className="px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+            <span className="text-amber-400 text-[10px] font-bold uppercase tracking-wider">Pending</span>
           </div>
         );
       case 'FAILED':
       default:
         return (
-          <div className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center justify-center">
-            <span className="text-red-400 text-sm font-medium">Failed</span>
+          <div className="px-2.5 py-1 rounded-md bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+            <span className="text-red-400 text-[10px] font-bold uppercase tracking-wider">Failed</span>
           </div>
         );
     }
@@ -183,18 +189,17 @@ const MessageLogs: React.FC = () => {
     
     const getBarColor = (index: number) => {
       if (index >= filledBars && retryCount > 0) {
-        return "bg-muted/40 border border-border/30";
+        return "bg-secondary border border-border/30";
       } else if (retryCount === 0) {
-        // If 0 retries, show it as an empty bar unless it's just successfully sent on first try
-        if (status === 'SENT') return "bg-green-500/60";
-        return "bg-muted/40 border border-border/30";
+        if (status === 'SENT') return "bg-emerald-500/60";
+        return "bg-secondary border border-border/30";
       }
       
       switch (status) {
         case "SENT":
-          return "bg-green-500/60";
+          return "bg-emerald-500/60";
         case "PENDING":
-          return "bg-yellow-500/50";
+          return "bg-amber-500/50";
         case "FAILED":
         default:
           return "bg-red-500/60";
@@ -724,15 +729,25 @@ const MessageLogs: React.FC = () => {
                   Cancel
                 </button>
                 <button
-                  onClick={handleManualRenewal}
+                  onClick={() => handleManualAction(false)}
                   disabled={submittingManual || !manualNotes.trim()}
                   className="flex items-center gap-2 px-5 py-2 rounded-lg font-medium
-                    bg-gradient-to-r from-orange-500 to-amber-500 text-white
+                    bg-red-500/10 text-red-400 border border-red-500/20
+                    hover:bg-red-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <FaTimes />
+                  {submittingManual ? 'Saving...' : 'Not Done (Lost Client)'}
+                </button>
+                <button
+                  onClick={() => handleManualAction(true)}
+                  disabled={submittingManual || !manualNotes.trim()}
+                  className="flex items-center gap-2 px-5 py-2 rounded-lg font-medium
+                    bg-gradient-to-r from-emerald-500 to-teal-500 text-white
                     hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed
-                    shadow-lg shadow-orange-500/20"
+                    shadow-lg shadow-emerald-500/20"
                 >
                   <FaCheckCircle />
-                  {submittingManual ? 'Saving...' : 'Confirm Manual Renewal'}
+                  {submittingManual ? 'Saving...' : 'Done (Renewed)'}
                 </button>
               </div>
             </div>

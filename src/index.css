@@ -8,98 +8,127 @@
 
 @layer base {
   :root {
-    /* Aesthetic Agent Theme - True Black */
-    --background: 228 14% 5%;
-    --foreground: 210 40% 98%;
+    /* Precision Dark Theme - Professional SaaS */
+    --background: 220 15% 3%;
+    --foreground: 210 20% 98%;
 
-    --card: 228 14% 8%;
-    --card-foreground: 210 40% 98%;
+    --card: 220 15% 5%;
+    --card-foreground: 210 20% 98%;
 
-    --popover: 228 14% 8%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 220 15% 5%;
+    --popover-foreground: 210 20% 98%;
 
-    --primary: 173 67% 47%;
+    --primary: 217 91% 60%; /* Professional Blue */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 228 14% 11%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 220 15% 10%;
+    --secondary-foreground: 210 20% 98%;
 
-    --muted: 228 14% 14%;
-    --muted-foreground: 215 15% 55%;
+    --muted: 220 15% 12%;
+    --muted-foreground: 215 15% 60%;
 
-    --accent: 241 98% 80%;
+    --accent: 217 91% 60%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 228 14% 14%;
-    --input: 228 14% 11%;
-    --ring: 173 67% 47%;
+    --border: 220 15% 12%;
+    --input: 220 15% 10%;
+    --ring: 217 91% 60%;
 
-    --radius: 1rem;
+    --radius: 0.75rem;
 
-    /* Sidebar */
-    --sidebar-background: 228 14% 4%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 173 67% 47%;
+    /* Sidebar - Structured */
+    --sidebar-background: 220 15% 2%;
+    --sidebar-foreground: 210 20% 98%;
+    --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 228 14% 10%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 228 14% 12%;
-    --sidebar-ring: 173 67% 47%;
+    --sidebar-accent: 220 15% 8%;
+    --sidebar-accent-foreground: 210 20% 98%;
+    --sidebar-border: 220 15% 10%;
+    --sidebar-ring: 217 91% 60%;
 
     /* Custom tokens */
-    --success: 142 71% 45%;
+    --success: 158 64% 45%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
+    --warning: 38 92% 55%;
     --warning-foreground: 0 0% 0%;
-    --info: 199 89% 48%;
+    --info: 217 91% 60%;
     --info-foreground: 0 0% 100%;
 
-    /* Gradients - Cyber/Agent tones */
-    --gradient-primary: linear-gradient(135deg, hsl(241, 98%, 80%) 0%, hsl(173, 67%, 47%) 100%);
-    --gradient-success: linear-gradient(135deg, hsl(142, 71%, 45%) 0%, hsl(158, 64%, 52%) 100%);
-    --gradient-warning: linear-gradient(135deg, hsl(38, 92%, 50%) 0%, hsl(45, 93%, 47%) 100%);
-    --gradient-danger: linear-gradient(135deg, hsl(348, 100%, 61%) 0%, hsl(328, 100%, 54%) 100%);
-    --gradient-sidebar: linear-gradient(180deg, hsl(241, 98%, 80%) 0%, hsl(173, 67%, 47%) 100%);
+    /* Gradients - Minimal & Professional */
+    --gradient-primary: linear-gradient(to bottom right, hsl(217, 91%, 60%), hsl(224, 76%, 48%));
+    --gradient-success: linear-gradient(to bottom right, hsl(158, 64%, 45%), hsl(160, 60%, 40%));
+    --gradient-warning: linear-gradient(to bottom right, hsl(38, 92%, 55%), hsl(45, 93%, 50%));
+    --gradient-danger: linear-gradient(to bottom right, hsl(0, 84%, 60%), hsl(0, 75%, 50%));
+    --gradient-sidebar: linear-gradient(180deg, hsl(220, 15% 4%) 0%, hsl(220, 15% 2%) 100%);
 
-    /* Shadows - Ethereal */
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.1);
-    --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.2), 0 2px 4px -2px rgb(0 0 0 / 0.2);
-    --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
-    --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.4);
-    --shadow-glow: 0 0 30px -5px rgba(43, 200, 183, 0.4);
+    /* Shadows - Precision */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5);
+    --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.6), 0 8px 10px -6px rgb(0 0 0 / 0.6);
+    --shadow-glow: none; /* Removed glow for professional feel */
   }
 
   .dark {
-    --background: 228 14% 5%;
-    --foreground: 210 40% 98%;
-    --card: 228 14% 8%;
-    --card-foreground: 210 40% 98%;
-    --popover: 228 14% 8%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 173 67% 47%;
+    --background: 220 15% 3%;
+    --foreground: 210 20% 98%;
+    --card: 220 15% 5%;
+    --card-foreground: 210 20% 98%;
+    --popover: 220 15% 5%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 228 14% 11%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 228 14% 14%;
-    --muted-foreground: 215 15% 55%;
-    --accent: 241 98% 80%;
+    --secondary: 220 15% 10%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 220 15% 12%;
+    --muted-foreground: 215 15% 60%;
+    --accent: 217 91% 60%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 72% 51%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 228 14% 14%;
-    --input: 228 14% 11%;
-    --ring: 173 67% 47%;
-    --sidebar-background: 228 14% 4%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 173 67% 47%;
+    --border: 220 15% 12%;
+    --input: 220 15% 10%;
+    --ring: 217 91% 60%;
+    --sidebar-background: 220 15% 2%;
+    --sidebar-foreground: 210 20% 98%;
+    --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 228 14% 10%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 228 14% 12%;
-    --sidebar-ring: 173 67% 47%;
+    --sidebar-accent: 220 15% 8%;
+    --sidebar-accent-foreground: 210 20% 98%;
+    --sidebar-border: 220 15% 10%;
+    --sidebar-ring: 217 91% 60%;
+  }
+
+  /* Professional Enterprise Toasts */
+  .Toastify__toast {
+    @apply bg-card border border-border/80 rounded-lg px-4 py-3 shadow-2xl backdrop-blur-md !important;
+  }
+  .Toastify__toast-body {
+    @apply p-0 m-0 !important;
+  }
+  .Toastify__toast-icon {
+    @apply w-5 h-5 mr-3 !important;
+  }
+  .Toastify__toast--success {
+    @apply border-emerald-500/30 !important;
+  }
+  .Toastify__toast--error {
+    @apply border-red-500/30 !important;
+  }
+  .Toastify__toast--warning {
+    @apply border-warning/30 !important;
+  }
+  .Toastify__toast--info {
+    @apply border-primary/30 !important;
+  }
+  .Toastify__progress-bar {
+    @apply h-0.5 opacity-40 !important;
+  }
+  .Toastify__close-button {
+    @apply opacity-30 hover:opacity-100 transition-opacity !important;
   }
 }
 

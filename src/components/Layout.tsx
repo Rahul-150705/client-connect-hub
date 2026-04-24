@@ -1,8 +1,11 @@
 import React, { ReactNode, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FileText, MessageSquare, LogOut, ChevronLeft, ChevronRight, ShieldCheck, User } from 'lucide-react';
+import { 
+  LayoutDashboard, FileText, MessageSquare, LogOut, ShieldCheck, 
+  User, Search, Bell, Settings, ChevronLeft, ChevronRight, Menu 
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { toast } from 'react-toastify';
+import { showToast } from '../lib/toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface LayoutProps {
@@ -38,137 +41,141 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const handleLogout = () => {
     logout();
-    toast.info('Logged out successfully');
+    showToast.info('Session Ended', 'You have been logged out successfully.');
     navigate('/login');
   };
 
   return (
-    <div className="flex min-h-screen bg-[#000000] text-foreground">
-      {/* Sidebar */}
-      <aside
-        className={`${collapsed ? 'w-[80px]' : 'w-72'} fixed top-0 left-0 h-screen z-40 flex flex-col
-          bg-black/40 backdrop-blur-3xl border-r border-white/10
-          transition-all duration-500 ease-in-out`}
-      >
-        {/* Logo Section */}
-        <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-5 h-20 border-b border-white/5 flex-shrink-0`}>
-          <div className="w-10 h-10 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)] flex-shrink-0 group cursor-pointer transition-transform hover:scale-105 active:scale-95">
-            <ShieldCheck className="text-white w-6 h-6" />
-          </div>
-          {!collapsed && (
-            <div className="overflow-hidden">
-              <h2 className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60 leading-tight">Renew AI</h2>
-              <p className="text-[10px] text-primary font-bold tracking-[0.2em] uppercase opacity-80">Premium Portal</p>
+    <div className="flex flex-col min-h-screen bg-background text-foreground font-sans">
+      
+      {/* ═══ TOP NAVIGATION BAR (Enterprise Standard) ═══ */}
+      <header className="fixed top-0 left-0 right-0 h-16 bg-card border-b border-border/60 z-50 px-6 flex items-center justify-between backdrop-blur-md bg-card/80">
+        <div className="flex items-center gap-8">
+          {/* Logo & Brand */}
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
+              <ShieldCheck className="text-white w-5 h-5" />
             </div>
-          )}
+            <div className="flex flex-col">
+              <span className="text-sm font-black tracking-tight text-white uppercase leading-tight">Renew AI</span>
+              <span className="text-[9px] font-bold text-primary tracking-[0.2em] uppercase leading-tight">Enterprise Console</span>
+            </div>
+          </div>
+
+          {/* Global Search */}
+          <div className="hidden md:flex items-center relative group ml-4">
+            <Search className="absolute left-3 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+            <input 
+              type="text" 
+              placeholder="Search assets, clients, or logs... ( / )" 
+              className="bg-secondary/50 border border-border/50 rounded-lg pl-10 pr-4 py-1.5 text-xs w-[320px] focus:outline-none focus:ring-1 focus:ring-primary/50 focus:bg-secondary/80 transition-all"
+            />
+          </div>
         </div>
 
-        {/* Navigation Section */}
-        <nav className="flex-1 px-4 py-6 space-y-6 overflow-y-auto scrollbar-hide">
-          <div className="space-y-4">
-            {!collapsed && (
-              <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] px-3 mb-2">Platform</p>
-            )}
+        {/* Top Right Actions */}
+        <div className="flex items-center gap-2">
+          <button className="p-2 text-muted-foreground hover:text-white hover:bg-white/5 rounded-lg transition-all relative">
+            <Bell className="w-4.5 h-4.5" />
+            <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full border border-card" />
+          </button>
+          <button className="p-2 text-muted-foreground hover:text-white hover:bg-white/5 rounded-lg transition-all">
+            <Settings className="w-4.5 h-4.5" />
+          </button>
+          
+          <div className="h-6 w-[1px] bg-border/50 mx-2" />
+          
+          <div className="flex items-center gap-3 pl-2">
+            <div className="flex flex-col items-end hidden sm:flex">
+              <span className="text-xs font-bold text-white leading-tight">{user?.fullName || 'Rahul'}</span>
+              <span className="text-[10px] font-medium text-muted-foreground leading-tight">Administrator</span>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-secondary border border-border flex items-center justify-center overflow-hidden">
+              <User className="w-4 h-4 text-muted-foreground" />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex flex-1 pt-16">
+        
+        {/* ═══ SIDE NAVIGATION (Clean & Focused) ═══ */}
+        <aside
+          className={`${collapsed ? 'w-16' : 'w-64'} fixed left-0 top-16 bottom-0 z-40 flex flex-col
+            bg-card border-r border-border/60 transition-all duration-300 ease-in-out overflow-hidden`}
+        >
+          <nav className="flex-1 px-3 py-6 space-y-1">
             {navItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`group relative flex items-start ${collapsed ? 'justify-center' : 'gap-4'} px-3 py-3 rounded-2xl transition-all duration-300
+                  className={`group relative flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-lg transition-all duration-200
                     ${isActive
-                      ? 'bg-white/5 border border-white/10 shadow-[0_0_20px_rgba(255,255,255,0.03)]'
+                      ? 'bg-primary/10 text-primary border border-primary/20'
                       : 'text-muted-foreground hover:bg-white/[0.03] hover:text-white border border-transparent'
                     }`}
                   title={collapsed ? item.label : undefined}
                 >
-                  {/* Active Indicator Pin */}
-                  <AnimatePresence>
-                    {isActive && (
-                      <motion.div 
-                        layoutId="activeSide"
-                        initial={{ opacity: 0, scale: 0.5 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.5 }}
-                        className="absolute -left-1 top-1/2 -translate-y-1/2 w-1.5 h-6 rounded-full bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)] z-20" 
-                      />
-                    )}
-                  </AnimatePresence>
+                  <item.icon className={`w-4.5 h-4.5 shrink-0 transition-colors ${isActive ? 'text-primary' : 'group-hover:text-white'}`} />
                   
-                  <div className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-300 flex-shrink-0
-                    ${isActive ? 'bg-primary/20 text-primary' : 'bg-white/5 group-hover:bg-white/10'}`}>
-                    <item.icon className="w-5 h-5" />
-                  </div>
-
                   {!collapsed && (
-                    <div className="flex flex-col min-w-0 pt-0.5">
-                      <span className={`text-sm font-bold tracking-tight transition-colors ${isActive ? 'text-white' : 'text-white/60 group-hover:text-white'}`}>
-                        {item.label}
-                      </span>
-                      <span className="text-[11px] text-white/30 leading-snug group-hover:text-white/50 transition-colors mt-0.5">
-                        {item.description}
-                      </span>
-                    </div>
+                    <span className="text-xs font-bold tracking-tight">
+                      {item.label}
+                    </span>
                   )}
 
-                  {/* Tooltip for collapsed mode */}
                   {collapsed && (
-                    <div className="absolute left-full ml-4 px-3 py-2 rounded-xl bg-black/95 border border-white/10 text-xs font-bold text-white opacity-0 pointer-events-none group-hover:opacity-100 transition-all translate-x-[-10px] group-hover:translate-x-0 whitespace-nowrap z-50 shadow-2xl backdrop-blur-xl">
-                      <p>{item.label}</p>
-                      <p className="text-[10px] text-white/40 font-normal mt-1">{item.description}</p>
+                    <div className="absolute left-full ml-4 px-3 py-2 rounded-lg bg-popover border border-border text-[11px] font-bold text-white opacity-0 pointer-events-none group-hover:opacity-100 transition-all translate-x-[-10px] group-hover:translate-x-0 whitespace-nowrap z-50 shadow-2xl">
+                      {item.label}
                     </div>
                   )}
                 </Link>
               );
             })}
+          </nav>
+
+          {/* Footer Actions */}
+          <div className="px-3 pb-6 space-y-1 border-t border-border/40 pt-6">
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-lg
+                text-muted-foreground hover:text-white hover:bg-white/5 transition-all text-xs font-bold`}
+            >
+              {collapsed ? <ChevronRight className="w-4 h-4" /> : <><ChevronLeft className="w-4 h-4" /> <span>Collapse Sidebar</span></>}
+            </button>
+            <button
+              onClick={handleLogout}
+              className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-lg
+                text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-all text-xs font-bold`}
+            >
+              <LogOut className="w-4 h-4" />
+              {!collapsed && <span>Sign Out</span>}
+            </button>
+          </div>
+        </aside>
+
+        {/* ═══ MAIN CONTENT AREA ═══ */}
+        <main className={`flex-1 ${collapsed ? 'ml-16' : 'ml-64'} transition-all duration-300 ease-in-out relative min-h-screen`}>
+          {/* Subtle Background Pattern */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.03),transparent_40%)] pointer-events-none" />
+          
+          <div className="p-8 lg:p-12 relative z-10">
+            {children}
           </div>
 
-          {/* Help / Support Section */}
-          <div className="space-y-4 pt-4">
-            {!collapsed && (
-              <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] px-3 mb-2">Support</p>
-            )}
-            <Link to="#" className={`group flex items-center ${collapsed ? 'justify-center' : 'gap-4'} px-3 py-2 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all`}>
-              <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 group-hover:bg-white/10 flex-shrink-0">
-                <LayoutDashboard className="w-4 h-4" />
-              </div>
-              {!collapsed && <span className="text-sm font-medium">Documentation</span>}
-            </Link>
-          </div>
-        </nav>
-
-        {/* User Info & Logout */}
-        <div className="px-4 pb-6 border-t border-white/5 pt-6 space-y-4 flex-shrink-0">
-          <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} p-3 rounded-2xl bg-white/[0.03] border border-white/5`}>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 border border-white/10 flex items-center justify-center flex-shrink-0 shadow-inner">
-              <User className="text-white w-5 h-5" />
+          {/* Content Footer */}
+          <footer className="mt-auto px-12 py-8 border-t border-border/20 flex flex-col sm:flex-row justify-between items-center gap-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+            <p>© 2026 Renew AI Enterprise Console. All rights reserved.</p>
+            <div className="flex items-center gap-6">
+              <Link to="#" className="hover:text-primary transition-colors">Privacy Policy</Link>
+              <Link to="#" className="hover:text-primary transition-colors">Terms of Service</Link>
+              <Link to="#" className="hover:text-primary transition-colors">Support</Link>
             </div>
-            {!collapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-white truncate">{user?.fullName || 'Rahul'}</p>
-                <p className="text-[10px] text-white/30 font-medium truncate">{user?.email || 'rahul@renew.ai'}</p>
-              </div>
-            )}
-          </div>
-          <button
-            onClick={handleLogout}
-            className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-4 py-3 rounded-2xl
-              text-white/40 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20
-              transition-all duration-300 text-sm`}
-            title={collapsed ? 'Sign Out' : undefined}
-          >
-            <LogOut className="w-4 h-4 flex-shrink-0" />
-            {!collapsed && <span className="font-bold">Sign Out</span>}
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className={`flex-1 ${collapsed ? 'ml-[72px]' : 'ml-64'} transition-all duration-300 ease-in-out`}>
-        <div className="p-6 lg:p-8 max-w-7xl mx-auto animate-fade-in">
-          {children}
-        </div>
-      </main>
+          </footer>
+        </main>
+      </div>
     </div>
   );
 };
