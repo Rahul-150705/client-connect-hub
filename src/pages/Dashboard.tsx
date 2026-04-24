@@ -457,7 +457,7 @@ const Dashboard: React.FC = () => {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                   <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} dy={10} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} allowDecimals={false} />
-                  <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                  <Tooltip content={<GlassTooltip />} cursor={{ stroke: 'rgba(43,200,183,0.3)', strokeWidth: 1 }} />
                   <Area type="monotone" dataKey="policies" name="Active Policies" stroke="#2BC8B7" strokeWidth={3} fillOpacity={1} fill="url(#policyGrad)" activeDot={{ r: 6, fill: '#fff', stroke: '#2BC8B7', strokeWidth: 2 }} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -540,7 +540,7 @@ const Dashboard: React.FC = () => {
                           <Cell key={`c-${idx}`} fill={DONUT_COLORS[idx % DONUT_COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip contentStyle={CHART_TOOLTIP_STYLE} itemStyle={{ color: '#fff' }} />
+                      <Tooltip content={<GlassTooltip valueSuffix="" />} />
                     </PieChart>
                   </ResponsiveContainer>
                 )}
