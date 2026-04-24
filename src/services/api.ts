@@ -128,6 +128,16 @@ export const messagesAPI = {
 
   // Retry a failed message (max 3 attempts)
   retryMessage: (id: number) => api.post(`/messages/${id}/retry`),
+  
+  // Bulk trigger reminders manually
+  triggerBulkReminders: () => api.post('/messages/send-bulk'),
+};
+
+export const dashboardAPI = {
+  getSummary: (period: number = 30) => api.get(`/dashboard/summary?period=${period}`),
+  getClaimsDistribution: () => api.get('/dashboard/claims-distribution'),
+  getCommunicationStats: () => api.get('/dashboard/communication-stats'),
+  getAiInsights: () => api.get('/dashboard/ai-insights'),
 };
 
 export default api;

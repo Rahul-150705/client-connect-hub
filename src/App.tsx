@@ -4,12 +4,12 @@ import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Pages
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import Policies from './pages/Policies';
 import MessageLogs from './pages/MessageLogs';
-import Landing from './pages/Landing';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -30,14 +30,17 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 function AppRoutes() {
+  const { isAuthenticated } = useAuth();
+
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
+        <Route path="/" element={isAuthenticated() ? <Navigate to="/dashboard" /> : <Landing />} />
+        <Route path="/login" element={isAuthenticated() ? <Navigate to="/dashboard" /> : <Login />} />
+        <Route path="/signup" element={isAuthenticated() ? <Navigate to="/dashboard" /> : <Signup />} />
         <Route path="/landing" element={<Landing />} />
         <Route
-          path="/"
+          path="/dashboard"
           element={
             <ProtectedRoute>
               <Dashboard />

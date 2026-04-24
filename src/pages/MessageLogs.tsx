@@ -2,9 +2,12 @@ import React, { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import { messagesAPI, policyAPI } from '../services/api';
 import { toast } from 'react-toastify';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { useTheme } from 'next-themes';
+import { X, RotateCcw } from 'lucide-react';
 import {
   FaCheckCircle, FaExclamationCircle, FaClock, FaWhatsapp, FaSms,
-  FaRedo, FaPhoneAlt, FaTimes, FaInfoCircle, FaExclamationTriangle
+  FaPhoneAlt, FaTimes, FaExclamationTriangle
 } from 'react-icons/fa';
 
 interface MessageLog {
@@ -31,6 +34,9 @@ const MessageLogs: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [retryingId, setRetryingId] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  
+  const [hoveredLog, setHoveredLog] = useState<number | null>(null);
+  const [selectedLog, setSelectedLog] = useState<MessageLog | null>(null);
 
   // Manual renewal modal state
   const [showManualModal, setShowManualModal] = useState(false);
@@ -38,12 +44,22 @@ const MessageLogs: React.FC = () => {
   const [manualNotes, setManualNotes] = useState('');
   const [submittingManual, setSubmittingManual] = useState(false);
 
-  // Detail panel state
-  const [selectedLog, setSelectedLog] = useState<MessageLog | null>(null);
+  const shouldReduceMotion = useReducedMotion();
+  const { theme } = useTheme();
 
   useEffect(() => {
     fetchLogs();
   }, []);
+
+  // Update selected log when logs change (for real-time updates)
+  useEffect(() => {
+    if (selectedLog) {
+      const updatedLog = logs.find(l => l.id === selectedLog.id);
+      if (updatedLog) {
+        setSelectedLog(updatedLog);
+      }
+    }
+  }, [logs, selectedLog]);
 
   const fetchLogs = async () => {
     try {
@@ -57,27 +73,18 @@ const MessageLogs: React.FC = () => {
     }
   };
 
-  // ===== RETRY LOGIC =====
   const handleRetry = async (logId: number) => {
     setRetryingId(logId);
     try {
       const response = await messagesAPI.retryMessage(logId);
       const updatedLog = response.data;
 
-      // Update the log in state
-      setLogs(prev =>
-        prev.map(log => (log.id === logId ? updatedLog : log))
-      );
+      setLogs(prev => prev.map(log => (log.id === logId ? updatedLog : log)));
 
       if (updatedLog.status === 'SENT') {
         toast.success(`✅ Message resent successfully! (Attempt ${updatedLog.retryCount})`);
       } else {
         toast.warning(`⚠️ Retry attempt ${updatedLog.retryCount} failed. ${updatedLog.retryCount >= 3 ? 'Max retries exhausted.' : 'Try again.'}`);
-      }
-
-      // Update selected log if it's the same one
-      if (selectedLog?.id === logId) {
-        setSelectedLog(updatedLog);
       }
     } catch (error: any) {
       const errorMsg = error.response?.data?.error || 'Failed to retry message';
@@ -87,7 +94,6 @@ const MessageLogs: React.FC = () => {
     }
   };
 
-  // ===== MANUAL RENEWAL LOGIC =====
   const openManualModal = (log: MessageLog) => {
     setManualTarget(log);
     setManualNotes('');
@@ -109,7 +115,6 @@ const MessageLogs: React.FC = () => {
       setShowManualModal(false);
       setManualTarget(null);
       setManualNotes('');
-      // Refresh logs to get updated state
       fetchLogs();
     } catch (error: any) {
       const errorMsg = error.response?.data?.error || 'Failed to mark policy as manually renewed';
@@ -119,49 +124,100 @@ const MessageLogs: React.FC = () => {
     }
   };
 
-  // ===== STATUS BADGES =====
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'SENT':
+  // ===== DESIGN HELPERS =====
+  const getChannelIcon = (channel: string) => {
+    switch (channel) {
+      case "WHATSAPP":
         return (
-          <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 bg-emerald-500/15 text-emerald-400 rounded-full font-medium">
-            <FaCheckCircle /> Sent
-          </span>
+          <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center p-1.5 border border-border/30">
+            <FaWhatsapp className="text-white text-lg" />
+          </div>
         );
-      case 'FAILED':
-        return (
-          <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 bg-red-500/15 text-red-400 rounded-full font-medium">
-            <FaExclamationCircle /> Failed
-          </span>
-        );
+      case "SMS":
       default:
         return (
-          <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 bg-amber-500/15 text-amber-400 rounded-full font-medium">
-            <FaClock /> Pending
-          </span>
+          <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center p-1.5 border border-border/30">
+            <FaSms className="text-white text-lg" />
+          </div>
         );
     }
   };
 
-  const getChannelBadge = (channel: string) => {
-    return channel === 'WHATSAPP' ? (
-      <span className="flex items-center gap-1 text-xs font-semibold text-emerald-400">
-        <FaWhatsapp className="text-sm" /> WhatsApp
-      </span>
-    ) : (
-      <span className="flex items-center gap-1 text-xs font-semibold text-blue-400">
-        <FaSms className="text-sm" /> SMS
-      </span>
-    );
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'SENT':
+        return (
+          <div className="px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/30 flex items-center justify-center">
+            <span className="text-green-400 text-sm font-medium">Sent</span>
+          </div>
+        );
+      case 'PENDING':
+        return (
+          <div className="px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center">
+            <span className="text-yellow-400 text-sm font-medium">Pending</span>
+          </div>
+        );
+      case 'FAILED':
+      default:
+        return (
+          <div className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center justify-center">
+            <span className="text-red-400 text-sm font-medium">Failed</span>
+          </div>
+        );
+    }
   };
 
-  const getRetryBadge = (log: MessageLog) => {
-    if (log.retryCount === 0) return null;
-    const color = log.retryCount >= 3 ? 'text-red-400 bg-red-500/10' : 'text-amber-400 bg-amber-500/10';
+  const getStatusGradient = (status: string) => {
+    switch (status) {
+      case 'SENT':
+        return "from-green-500/10 to-transparent";
+      case 'PENDING': 
+        return "from-yellow-500/10 to-transparent";
+      case 'FAILED':
+      default:
+        return "from-red-500/10 to-transparent";
+    }
+  };
+
+  const getRetryBars = (retryCount: number, status: string) => {
+    const totalRetries = 3;
+    const maxBars = 10;
+    const filledBars = Math.round((retryCount / totalRetries) * maxBars);
+    
+    const getBarColor = (index: number) => {
+      if (index >= filledBars && retryCount > 0) {
+        return "bg-muted/40 border border-border/30";
+      } else if (retryCount === 0) {
+        // If 0 retries, show it as an empty bar unless it's just successfully sent on first try
+        if (status === 'SENT') return "bg-green-500/60";
+        return "bg-muted/40 border border-border/30";
+      }
+      
+      switch (status) {
+        case "SENT":
+          return "bg-green-500/60";
+        case "PENDING":
+          return "bg-yellow-500/50";
+        case "FAILED":
+        default:
+          return "bg-red-500/60";
+      }
+    };
+    
     return (
-      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${color}`}>
-        {log.retryCount}/3 retries
-      </span>
+      <div className="flex items-center gap-3">
+        <div className="flex gap-1">
+          {Array.from({ length: maxBars }).map((_, index) => (
+            <div
+              key={index}
+              className={`w-1.5 h-5 rounded-full transition-all duration-500 ${getBarColor(index)}`}
+            />
+          ))}
+        </div>
+        <span className="text-sm font-mono text-foreground font-medium min-w-[3rem]">
+          {retryCount}/3
+        </span>
+      </div>
     );
   };
 
@@ -272,203 +328,315 @@ const MessageLogs: React.FC = () => {
           </button>
         </div>
 
-        {/* Message Table */}
-        <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-secondary/50 text-muted-foreground font-medium border-b border-border">
-                <tr>
-                  <th className="p-4">Date Sent</th>
-                  <th className="p-4">Client</th>
-                  <th className="p-4">Channel</th>
-                  <th className="p-4">Phone</th>
-                  <th className="p-4">Message</th>
-                  <th className="p-4 text-center">Status</th>
-                  <th className="p-4 text-center">Retries</th>
-                  <th className="p-4 text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/50">
-                {filteredLogs.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="p-8 text-center text-muted-foreground">
-                      {statusFilter === 'ALL' 
-                        ? 'No messages have been sent yet.' 
-                        : `No ${statusFilter.toLowerCase().replace('_', ' ')} messages.`}
-                    </td>
-                  </tr>
-                ) : (
-                  filteredLogs.map((log) => (
-                    <tr
-                      key={log.id}
-                      className={`hover:bg-secondary/20 transition-colors cursor-pointer
-                        ${log.status === 'FAILED' && log.maxRetriesExhausted ? 'bg-red-500/5' : ''}
-                        ${selectedLog?.id === log.id ? 'bg-primary/5' : ''}`}
-                      onClick={() => setSelectedLog(selectedLog?.id === log.id ? null : log)}
-                    >
-                      <td className="p-4 whitespace-nowrap text-foreground font-medium">
-                        {new Date(log.sentAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-                      </td>
-                      <td className="p-4">
-                        <div className="font-semibold text-foreground">{log.clientName || 'Unknown'}</div>
-                        <div className="text-xs text-muted-foreground">Pol: {log.policyNumber || 'N/A'}</div>
-                      </td>
-                      <td className="p-4">{getChannelBadge(log.channel)}</td>
-                      <td className="p-4 text-muted-foreground font-mono text-xs">{log.recipientPhone}</td>
-                      <td className="p-4 max-w-[200px]">
-                        <p className="text-xs text-muted-foreground line-clamp-2" title={log.messageContent}>
-                          {log.messageContent}
-                        </p>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex flex-col items-center gap-1">
-                          {getStatusBadge(log.status)}
+        {/* Animated Message Table */}
+        <div className="relative border border-border/30 rounded-2xl p-6 bg-card min-h-[500px]">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                <h2 className="text-xl font-medium text-foreground">Message Activity</h2>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Showing {filteredLogs.length} logs
+              </div>
+            </div>
+          </div>
+
+          <motion.div
+            className="space-y-2"
+            variants={{
+              visible: {
+                transition: {
+                  staggerChildren: 0.05,
+                  delayChildren: 0.1,
+                }
+              }
+            }}
+            initial="hidden"
+            animate="visible"
+          >
+            {/* Headers */}
+            <div className="grid grid-cols-12 gap-4 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <div className="col-span-1">No</div>
+              <div className="col-span-3">Client Details</div>
+              <div className="col-span-2">Channel</div>
+              <div className="col-span-2">Date Sent</div>
+              <div className="col-span-2">Retries</div>
+              <div className="col-span-2 text-right">Status / Action</div>
+            </div>
+
+            {/* Rows */}
+            {filteredLogs.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground bg-muted/20 rounded-xl border border-border/50">
+                {statusFilter === 'ALL' 
+                  ? 'No messages have been sent yet.' 
+                  : `No ${statusFilter.toLowerCase().replace('_', ' ')} messages.`}
+              </div>
+            ) : (
+              filteredLogs.map((log, index) => (
+                <motion.div
+                  key={log.id}
+                  variants={{
+                    hidden: { 
+                      opacity: 0, 
+                      x: -20,
+                      scale: 0.98,
+                      filter: "blur(2px)" 
+                    },
+                    visible: {
+                      opacity: 1,
+                      x: 0,
+                      scale: 1,
+                      filter: "blur(0px)",
+                      transition: {
+                        type: "spring",
+                        stiffness: 400,
+                        damping: 30,
+                      },
+                    },
+                  }}
+                  className="relative cursor-pointer group"
+                  onMouseEnter={() => setHoveredLog(log.id)}
+                  onMouseLeave={() => setHoveredLog(null)}
+                  onClick={() => setSelectedLog(log)}
+                >
+                  <motion.div
+                    className="relative bg-muted/50 border border-border/50 rounded-xl p-4 overflow-hidden"
+                    whileHover={{
+                      y: -1,
+                      transition: { type: "spring", stiffness: 400, damping: 25 }
+                    }}
+                  >
+                    {/* Status gradient overlay */}
+                    <div 
+                      className={`absolute inset-0 bg-gradient-to-l ${getStatusGradient(log.status)} pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300`}
+                      style={{ 
+                        backgroundSize: "30% 100%", 
+                        backgroundPosition: "right",
+                        backgroundRepeat: "no-repeat"
+                      }} 
+                    />
+                    
+                    {/* Grid Content */}
+                    <div className="relative grid grid-cols-12 gap-4 items-center">
+                      {/* Number */}
+                      <div className="col-span-1">
+                        <span className="text-xl font-bold text-muted-foreground/60">
+                          {index + 1 < 10 ? `0${index + 1}` : index + 1}
+                        </span>
+                      </div>
+
+                      {/* Client Details */}
+                      <div className="col-span-3 flex flex-col justify-center gap-0.5">
+                        <span className="text-foreground font-medium truncate">
+                          {log.clientName || 'Unknown'}
+                        </span>
+                        <span className="text-muted-foreground text-xs font-mono truncate">
+                          Pol: {log.policyNumber || 'N/A'}
+                        </span>
+                      </div>
+
+                      {/* Channel & Phone */}
+                      <div className="col-span-2 flex items-center gap-3">
+                        {getChannelIcon(log.channel)}
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-foreground text-sm font-medium">{log.channel === 'WHATSAPP' ? 'WhatsApp' : 'SMS'}</span>
+                          <span className="text-muted-foreground text-xs font-mono">{log.recipientPhone}</span>
                         </div>
-                      </td>
-                      <td className="p-4 text-center">
-                        {getRetryBadge(log)}
-                      </td>
-                      <td className="p-4" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-center gap-2">
-                          {/* RETRY BUTTON: shown when status=FAILED and retryCount < 3 */}
-                          {log.canRetry && (
-                            <button
-                              onClick={() => handleRetry(log.id)}
-                              disabled={retryingId === log.id}
-                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
-                                bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/20
-                                hover:border-blue-500/40 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                              title={`Retry sending (attempt ${log.retryCount + 1}/3)`}
-                            >
-                              <FaRedo className={`text-[10px] ${retryingId === log.id ? 'animate-spin' : ''}`} />
-                              {retryingId === log.id ? 'Retrying...' : 'Retry'}
-                            </button>
-                          )}
+                      </div>
 
-                          {/* MARK MANUAL BUTTON: shown when retryCount >= 3 */}
-                          {log.maxRetriesExhausted && log.status === 'FAILED' && (
-                            <button
-                              onClick={() => openManualModal(log)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
-                                bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 border border-orange-500/20
-                                hover:border-orange-500/40 transition-all duration-200"
-                              title="Call customer and mark as manually renewed"
-                            >
-                              <FaPhoneAlt className="text-[10px]" />
-                              Mark Manual
-                            </button>
-                          )}
+                      {/* Date Sent */}
+                      <div className="col-span-2">
+                        <span className="text-foreground text-sm">
+                          {new Date(log.sentAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                        </span>
+                      </div>
 
-                          {/* INFO BUTTON: always shown */}
+                      {/* Retries */}
+                      <div className="col-span-2">
+                        {getRetryBars(log.retryCount, log.status)}
+                      </div>
+
+                      {/* Status & Action */}
+                      <div className="col-span-2 flex items-center justify-end gap-2">
+                        {getStatusBadge(log.status)}
+                        {log.canRetry && (
                           <button
-                            onClick={() => setSelectedLog(selectedLog?.id === log.id ? null : log)}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground
-                              hover:bg-secondary transition-all duration-200"
-                            title="View details"
+                            className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg transition-colors z-10 relative"
+                            onClick={(e) => { e.stopPropagation(); handleRetry(log.id); }}
+                            title="Retry Message"
+                            disabled={retryingId === log.id}
                           >
-                            <FaInfoCircle className="text-sm" />
+                            <RotateCcw className={`w-3.5 h-3.5 ${retryingId === log.id ? 'animate-spin' : ''}`} />
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Detail Panel - shown when a log is selected */}
-        {selectedLog && (
-          <div className="bg-card rounded-2xl border border-border shadow-sm p-6 space-y-4 animate-fade-in">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-foreground">Message Details</h3>
-              <button
-                onClick={() => setSelectedLog(null)}
-                className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
-              >
-                <FaTimes />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Client</label>
-                <p className="text-foreground font-medium">{selectedLog.clientName || 'Unknown'}</p>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Policy Number</label>
-                <p className="text-foreground font-mono">{selectedLog.policyNumber || 'N/A'}</p>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Channel</label>
-                <div>{getChannelBadge(selectedLog.channel)}</div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Status</label>
-                <div>{getStatusBadge(selectedLog.status)}</div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Retry Count</label>
-                <p className="text-foreground">{selectedLog.retryCount} / 3</p>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Last Attempt</label>
-                <p className="text-foreground">
-                  {selectedLog.lastAttemptAt
-                    ? new Date(selectedLog.lastAttemptAt).toLocaleString()
-                    : 'N/A'}
-                </p>
-              </div>
-            </div>
-
-            {selectedLog.failureReason && (
-              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
-                <p className="text-xs text-red-400 font-medium uppercase tracking-wider mb-1">Failure Reason</p>
-                <p className="text-sm text-red-300">{selectedLog.failureReason}</p>
-              </div>
+                        )}
+                        {log.maxRetriesExhausted && log.status === 'FAILED' && (
+                          <button
+                            className="p-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/30 rounded-lg transition-colors z-10 relative"
+                            onClick={(e) => { e.stopPropagation(); openManualModal(log); }}
+                            title="Mark Manual"
+                          >
+                            <FaPhoneAlt className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              ))
             )}
+          </motion.div>
 
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Full Message</label>
-              <p className="text-sm text-foreground bg-secondary/50 rounded-lg p-3">{selectedLog.messageContent}</p>
-            </div>
+          {/* Overlay Panel inside Card */}
+          <AnimatePresence>
+            {selectedLog && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                transition={{ duration: 0.2 }}
+                className="absolute inset-0 bg-background/80 backdrop-blur-md flex flex-col rounded-2xl z-20 overflow-hidden border border-border/50 shadow-2xl"
+              >
+                {/* Header with Actions */}
+                <div className="relative bg-gradient-to-r from-muted/80 to-transparent p-5 border-b border-border/40 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="text-3xl font-bold text-muted-foreground/30 px-2">
+                      #{selectedLog.id}
+                    </div>
+                    {getChannelIcon(selectedLog.channel)}
+                    <div>
+                      <h3 className="text-lg font-bold text-foreground">
+                        {selectedLog.clientName || 'Unknown Client'}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-sm text-muted-foreground font-mono bg-background/50 px-2 py-0.5 rounded">
+                          {selectedLog.policyNumber || 'N/A'}
+                        </span>
+                        <span className="text-muted-foreground/40">•</span>
+                        <span className="text-sm text-muted-foreground font-mono">
+                          {selectedLog.recipientPhone}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
-            {/* Action buttons in detail panel */}
-            <div className="flex gap-3 pt-2">
-              {selectedLog.canRetry && (
-                <button
-                  onClick={() => handleRetry(selectedLog.id)}
-                  disabled={retryingId === selectedLog.id}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm
-                    bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/20
-                    hover:border-blue-500/40 transition-all duration-200 disabled:opacity-50"
-                >
-                  <FaRedo className={retryingId === selectedLog.id ? 'animate-spin' : ''} />
-                  {retryingId === selectedLog.id ? 'Retrying...' : `Retry (Attempt ${selectedLog.retryCount + 1}/3)`}
-                </button>
-              )}
+                  {/* Action Buttons in Header */}
+                  <div className="flex items-center gap-2">
+                    {/* Retry */}
+                    {selectedLog.canRetry && (
+                      <motion.button
+                        className="flex items-center gap-1.5 px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                        onClick={() => handleRetry(selectedLog.id)}
+                        disabled={retryingId === selectedLog.id}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <RotateCcw className={`w-3.5 h-3.5 ${retryingId === selectedLog.id ? 'animate-spin' : ''}`} />
+                        {retryingId === selectedLog.id ? 'Retrying...' : 'Retry'}
+                      </motion.button>
+                    )}
 
-              {selectedLog.maxRetriesExhausted && selectedLog.status === 'FAILED' && (
-                <button
-                  onClick={() => openManualModal(selectedLog)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm
-                    bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 border border-orange-500/20
-                    hover:border-orange-500/40 transition-all duration-200"
-                >
-                  <FaPhoneAlt />
-                  Mark as Contacted Manually
-                </button>
-              )}
-            </div>
-          </div>
-        )}
+                    {/* Mark Manual */}
+                    {selectedLog.maxRetriesExhausted && selectedLog.status === 'FAILED' && (
+                      <motion.button
+                        className="flex items-center gap-1.5 px-4 py-2 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/30 rounded-lg text-sm font-medium transition-colors"
+                        onClick={() => openManualModal(selectedLog)}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <FaPhoneAlt className="w-3.5 h-3.5" />
+                        Mark Manual
+                      </motion.button>
+                    )}
+
+                    {/* Close Button */}
+                    <motion.button
+                      className="w-10 h-10 bg-background hover:bg-muted rounded-full flex items-center justify-center border border-border/50 ml-2 shadow-sm"
+                      onClick={() => setSelectedLog(null)}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <X className="w-5 h-5 text-muted-foreground" />
+                    </motion.button>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+                  {/* Stats Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Date Sent */}
+                    <div className="bg-muted/30 rounded-xl p-4 border border-border/30">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Date Sent
+                      </label>
+                      <div className="text-sm font-medium mt-1.5">
+                        {new Date(selectedLog.sentAt).toLocaleString()}
+                      </div>
+                    </div>
+
+                    {/* Last Attempt */}
+                    <div className="bg-muted/30 rounded-xl p-4 border border-border/30">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Last Attempt
+                      </label>
+                      <div className="text-sm font-medium mt-1.5">
+                        {selectedLog.lastAttemptAt ? new Date(selectedLog.lastAttemptAt).toLocaleString() : 'N/A'}
+                      </div>
+                    </div>
+
+                    {/* Status */}
+                    <div className="bg-muted/30 rounded-xl p-4 border border-border/30">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">
+                        Status
+                      </label>
+                      <div>
+                        {getStatusBadge(selectedLog.status)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Retries & Reason */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-muted/30 rounded-xl p-4 border border-border/30">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3 block">
+                        Retry Progress
+                      </label>
+                      {getRetryBars(selectedLog.retryCount, selectedLog.status)}
+                    </div>
+
+                    {selectedLog.failureReason && (
+                      <div className="bg-red-500/5 rounded-xl p-4 border border-red-500/20">
+                        <label className="text-xs font-medium text-red-400 uppercase tracking-wider mb-2 block flex items-center gap-1.5">
+                          <FaExclamationTriangle /> Failure Reason
+                        </label>
+                        <div className="text-sm text-red-400/90 leading-relaxed">
+                          {selectedLog.failureReason}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Message Content */}
+                  <div className="bg-muted/30 rounded-xl p-4 border border-border/30 flex-1 flex flex-col">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3 block">
+                      Message Content
+                    </label>
+                    <div className="font-mono text-sm leading-relaxed overflow-y-auto bg-background/50 p-4 rounded-lg border border-border/30 text-foreground/80">
+                      {selectedLog.messageContent}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* ===== MANUAL RENEWAL MODAL ===== */}
       {showManualModal && manualTarget && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4"
           onClick={() => setShowManualModal(false)}
         >
           <div
@@ -509,22 +677,22 @@ const MessageLogs: React.FC = () => {
               </div>
 
               {/* Summary */}
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-2 gap-4 text-sm bg-muted/30 p-4 rounded-xl border border-border/30">
                 <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground font-medium">Client</label>
+                  <label className="text-xs text-muted-foreground font-medium uppercase">Client</label>
                   <p className="text-foreground font-medium">{manualTarget.clientName}</p>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground font-medium">Phone</label>
+                  <label className="text-xs text-muted-foreground font-medium uppercase">Phone</label>
                   <p className="text-foreground font-mono">{manualTarget.recipientPhone}</p>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground font-medium">Policy</label>
+                  <label className="text-xs text-muted-foreground font-medium uppercase">Policy</label>
                   <p className="text-foreground font-mono">{manualTarget.policyNumber}</p>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground font-medium">Channel</label>
-                  <div>{getChannelBadge(manualTarget.channel)}</div>
+                  <label className="text-xs text-muted-foreground font-medium uppercase">Channel</label>
+                  <div className="pt-1">{getChannelIcon(manualTarget.channel)}</div>
                 </div>
               </div>
 
@@ -579,3 +747,4 @@ const MessageLogs: React.FC = () => {
 };
 
 export default MessageLogs;
+

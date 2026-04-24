@@ -56,7 +56,7 @@ const Landing = () => {
       </section>
 
       <footer className="border-t border-white/5 py-10 text-center text-xs text-white/40">
-        © {new Date().getFullYear()} Insurly. Crafted with care.
+        © {new Date().getFullYear()} Renew AI. Crafted with care.
       </footer>
     </div>
   );
