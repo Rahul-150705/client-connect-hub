@@ -146,7 +146,16 @@ const MessageLogs: React.FC = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, retryCount: number) => {
+    if (status === 'FAILED' && retryCount > 0 && retryCount < 3) {
+      return (
+        <div className="px-2.5 py-1 rounded-md bg-blue-500/10 border border-blue-500/20 flex items-center justify-center gap-1.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+          <span className="text-blue-400 text-[10px] font-bold uppercase tracking-wider">Retrying</span>
+        </div>
+      );
+    }
+
     switch (status) {
       case 'SENT':
         return (
@@ -164,7 +173,7 @@ const MessageLogs: React.FC = () => {
       default:
         return (
           <div className="px-2.5 py-1 rounded-md bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-            <span className="text-red-400 text-[10px] font-bold uppercase tracking-wider">Failed</span>
+            <span className="text-red-400 text-[10px] font-bold uppercase tracking-wider">{retryCount >= 3 ? 'Failed (Max)' : 'Failed'}</span>
           </div>
         );
     }
@@ -461,7 +470,7 @@ const MessageLogs: React.FC = () => {
 
                       {/* Status & Action */}
                       <div className="col-span-2 flex items-center justify-end gap-2">
-                        {getStatusBadge(log.status)}
+                        {getStatusBadge(log.status, log.retryCount)}
                         {log.canRetry && (
                           <button
                             className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg transition-colors z-10 relative"
@@ -593,7 +602,7 @@ const MessageLogs: React.FC = () => {
                         Status
                       </label>
                       <div>
-                        {getStatusBadge(selectedLog.status)}
+                        {getStatusBadge(selectedLog.status, selectedLog.retryCount)}
                       </div>
                     </div>
                   </div>

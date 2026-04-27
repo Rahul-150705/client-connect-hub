@@ -11,7 +11,7 @@ import Layout from '../components/Layout';
 import { motion, type Variants } from 'framer-motion';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell,
+  PieChart, Pie, Cell, BarChart, Bar,
 } from 'recharts';
 import { Sparkline } from '../components/premium/Sparkline';
 import { GlassTooltip } from '../components/premium/GlassTooltip';
@@ -68,6 +68,11 @@ const Dashboard: React.FC = () => {
     queryKey: ['projectedRenewals', period],
     queryFn: () => dashboardAPI.getProjectedRenewals(period).then(res => res.data),
   });
+  
+  const revenueTrendsQuery = useQuery({
+    queryKey: ['revenueTrends'],
+    queryFn: () => dashboardAPI.getRevenueTrends().then(res => res.data),
+  });
 
   const loading = policiesQuery.isLoading || messageLogsQuery.isLoading || summaryQuery.isLoading || projectedRenewalsQuery.isLoading;
 
@@ -78,6 +83,7 @@ const Dashboard: React.FC = () => {
   const commStats = commStatsQuery.data;
   const aiInsights = aiInsightsQuery.data || [];
   const projectedRenewals = projectedRenewalsQuery.data || [];
+  const revenueTrends = revenueTrendsQuery.data || [];
   
   const stats = {
     total: summary?.totalPolicies || 0,
@@ -106,6 +112,13 @@ const Dashboard: React.FC = () => {
       policies: 0
     }));
   }, [projectedRenewals, period]);
+
+  const revenueChartData = useMemo(() => {
+    return revenueTrends.map(item => ({
+      month: item.name,
+      amount: item.value
+    }));
+  }, [revenueTrends]);
 
   const recentMessages = useMemo(() => {
     return [...messageLogs]
@@ -304,6 +317,60 @@ const Dashboard: React.FC = () => {
               </div>
             </motion.div>
           </div>
+
+          {/* ═══ REVENUE TREND ═══ */}
+          <motion.div variants={itemVariants} className="bg-card border border-border/40 rounded-xl p-8">
+            <div className="flex items-center justify-between mb-10">
+              <div>
+                <h3 className="text-lg font-bold text-white">Annual Revenue Trend</h3>
+                <p className="text-xs text-muted-foreground mt-1">Monthly breakdown of gross premiums for the current year</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Live Analytics</span>
+              </div>
+            </div>
+            
+            <div className="h-[360px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={revenueChartData} margin={{ top: 0, right: 0, left: 10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.02)" />
+                  <XAxis 
+                    dataKey="month" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }} 
+                    dy={15} 
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }}
+                    tickFormatter={(value) => `₹${value >= 1000 ? (value/1000).toFixed(1) + 'k' : value}`}
+                  />
+                  <Tooltip 
+                    contentStyle={CHART_TOOLTIP_STYLE}
+                    cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
+                    formatter={(value) => [`₹${value.toLocaleString()}`, 'Revenue']}
+                  />
+                  <Bar 
+                    dataKey="amount" 
+                    fill="#3b82f6" 
+                    radius={[4, 4, 0, 0]}
+                    barSize={40}
+                  >
+                    {revenueChartData.map((_entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={index === new Date().getMonth() ? '#6366f1' : '#3b82f6'} 
+                        fillOpacity={0.8}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </motion.div>
 
           {/* ═══ ACTIVITY & ALERTS ═══ */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

@@ -139,6 +139,7 @@ export const dashboardAPI = {
   getCommunicationStats: () => api.get('/dashboard/communication-stats'),
   getAiInsights: () => api.get('/dashboard/ai-insights'),
   getProjectedRenewals: (period: number = 30) => api.get(`/dashboard/projected-renewals?period=${period}`),
+  getRevenueTrends: () => api.get('/dashboard/revenue-trends'),
 };
 
 export default api;
