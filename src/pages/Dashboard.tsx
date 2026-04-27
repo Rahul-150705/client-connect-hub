@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, ShieldCheck, FileText, Clock, MessageSquare, 
   AlertTriangle, TrendingUp, TrendingDown, Plus, ChevronRight,
-  Filter, MoreHorizontal, Download, Calendar
+  Filter, MoreHorizontal, Download, Calendar, ArrowRight
 } from 'lucide-react';
 import { policyAPI, messagesAPI, dashboardAPI } from '../services/api';
 import Layout from '../components/Layout';
@@ -15,6 +15,7 @@ import {
 } from 'recharts';
 import { Sparkline } from '../components/premium/Sparkline';
 import { GlassTooltip } from '../components/premium/GlassTooltip';
+
 import { DashboardSkeleton } from '../components/premium/ShimmerSkeleton';
 
 // ── Professional Palette ──────────────────────────────────────
@@ -33,6 +34,7 @@ const CHART_TOOLTIP_STYLE = {
 const Dashboard: React.FC = () => {
   const [period, setPeriod] = useState(30);
   const navigate = useNavigate();
+
 
   const policiesQuery = useQuery({
     queryKey: ['policies'],
@@ -90,8 +92,9 @@ const Dashboard: React.FC = () => {
     expiring: summary?.expiringSoonCount || 0,
     renewalRate: summary?.renewalRate || 0,
     failedCount: summary?.failedMessagesCount || 0,
-    activePremium: summary?.activePremium || 0,
-    growth: summary?.policiesGrowthPercentage || 0
+    activePremium: summary?.annualPremium || 0,
+    growth: summary?.policiesGrowthPercentage || 0,
+    renewedThisMonth: summary?.renewedThisMonth || 0
   };
 
   const failedMessages = useMemo(() => messageLogs.filter(m => m.status === 'FAILED'), [messageLogs]);
@@ -164,8 +167,8 @@ const Dashboard: React.FC = () => {
               </p>
             </div>
             
-            <div className="flex items-center gap-3">
-              <div className="flex bg-secondary/30 p-1 rounded-lg border border-border/50">
+            <div className="flex items-center gap-4">
+                  <div className="flex bg-secondary/50 p-1 rounded-xl border border-border/50">
                 {[7, 30, 90].map(p => (
                   <button 
                     key={p}
@@ -185,13 +188,80 @@ const Dashboard: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* ═══ STATS GRID ═══ */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* ═══ MASTER METRICS (High Priority) ═══ */}
+          <div className="flex flex-col gap-6 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Total Policies Card */}
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-card border border-border/60 rounded-3xl p-8 relative overflow-hidden group hover:border-primary/40 transition-all shadow-2xl"
+              >
+                <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity">
+                  <ShieldCheck className="w-32 h-32" />
+                </div>
+                <div className="relative z-10">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                      <ShieldCheck className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">Total Portfolio</p>
+                      <h2 className="text-4xl font-black text-white">{stats.total}</h2>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between mt-6">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Global Assets Managed</span>
+                    <div className="h-1.5 w-48 bg-secondary rounded-full overflow-hidden">
+                      <div className="h-full bg-primary w-full shadow-[0_0_10px_rgba(59,130,246,0.4)]" />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Lost Clients Card (Clickable) */}
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                onClick={() => navigate('/policies?filter=LOST')}
+                className="bg-card border border-border/60 rounded-3xl p-8 relative overflow-hidden group hover:border-rose-500/40 transition-all shadow-2xl cursor-pointer"
+              >
+                <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity">
+                  <AlertTriangle className="w-32 h-32" />
+                </div>
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-400">
+                        <AlertTriangle className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">Lost Clients</p>
+                        <h2 className="text-4xl font-black text-white">{summary?.lostClientsCount || 0}</h2>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/20">Action Required</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between mt-6">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Unconfirmed Renewals</span>
+                    <div className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest group-hover:gap-3 transition-all">
+                      Click to view <ArrowRight className="w-3 h-3" />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+
+          {/* ═══ STATS GRID (Secondary Metrics) ═══ */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { label: 'Total Portfolio', value: stats.total, icon: ShieldCheck, color: 'text-primary', sparkColor: '#3b82f6', trend: `${stats.growth >= 0 ? '+' : ''}${stats.growth.toFixed(1)}%` },
-              { label: 'Active Premium', value: `₹${(stats.activePremium / 100000).toFixed(1)}L`, icon: FileText, color: 'text-emerald-400', sparkColor: '#10b981', trend: '+8.4%' },
+              { label: 'Expiring Premium', value: `₹${(stats.activePremium || 0).toLocaleString()}`, icon: FileText, color: 'text-emerald-400', sparkColor: '#10b981', trend: `${(summary?.revenueGrowthPercentage || 0) >= 0 ? '+' : ''}${(summary?.revenueGrowthPercentage || 0).toFixed(1)}%` },
               { label: 'Expiring Soon', value: stats.expiring, icon: Clock, color: 'text-warning', sparkColor: '#f59e0b', trend: stats.expiring > 10 ? 'Critical' : 'Stable' },
-              { label: 'Renewal Rate', value: `${stats.renewalRate.toFixed(1)}%`, icon: TrendingUp, color: 'text-indigo-400', sparkColor: '#6366f1', trend: 'Target 95%' },
+              { label: 'Renewed This Month', value: stats.renewedThisMonth, icon: TrendingUp, color: 'text-indigo-400', sparkColor: '#6366f1', trend: 'Monthly Target' },
             ].map((stat, i) => (
               <motion.div 
                 key={i}
@@ -213,6 +283,110 @@ const Dashboard: React.FC = () => {
                 </div>
               </motion.div>
             ))}
+          </div>
+
+          {/* ═══ CONVERSION & CHANNEL HEALTH ═══ */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <motion.div variants={itemVariants} className="bg-card border border-border/40 rounded-xl p-8">
+              <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-6">Monthly Conversion</h3>
+              <div className="flex flex-col items-center justify-center py-4">
+                <div className="relative w-40 h-40">
+                   <svg className="w-full h-full transform -rotate-90">
+                    <circle
+                      cx="80"
+                      cy="80"
+                      r="70"
+                      stroke="currentColor"
+                      strokeWidth="8"
+                      fill="transparent"
+                      className="text-secondary"
+                    />
+                    <motion.circle
+                      cx="80"
+                      cy="80"
+                      r="70"
+                      stroke="currentColor"
+                      strokeWidth="8"
+                      fill="transparent"
+                      strokeDasharray={440}
+                      initial={{ strokeDashoffset: 440 }}
+                      animate={{ strokeDashoffset: 440 - (440 * (summary?.conversionRate || 0)) / 100 }}
+                      className="text-primary"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-3xl font-bold text-white">{(summary?.conversionRate || 0).toFixed(1)}%</span>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Expiring → Renewed</span>
+                  </div>
+                </div>
+                <p className="text-xs text-center text-muted-foreground mt-6 leading-relaxed">
+                  Percentage of policies expiring this period that have been successfully renewed.
+                </p>
+              </div>
+            </motion.div>
+
+            <motion.div variants={itemVariants} className="bg-card border border-border/40 rounded-xl p-8">
+              <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-8">Channel Delivery Health</h3>
+              <div className="space-y-10 py-2">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-end">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20">
+                        <MessageSquare className="w-4 h-4" />
+                      </div>
+                      <span className="text-xs font-bold text-white">WhatsApp Success</span>
+                    </div>
+                    <span className="text-lg font-bold text-emerald-400">{(summary?.whatsappSuccessRate || 0).toFixed(1)}%</span>
+                  </div>
+                  <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${summary?.whatsappSuccessRate || 0}%` }}
+                      className="h-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.3)]"
+                    />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div variants={itemVariants} className="bg-card border border-border/40 rounded-xl p-8">
+              <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-6 text-rose-400">Action Required</h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-rose-500/5 border border-rose-500/10 rounded-xl group hover:bg-rose-500/10 transition-all cursor-pointer" onClick={() => navigate('/messages?status=FAILED')}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-400">
+                      <AlertTriangle className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white">Critical Retries</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Max attempts exhausted (3/3)</p>
+                    </div>
+                  </div>
+                  <div className="text-xl font-bold text-rose-400">{summary?.exhaustedRetriesCount || 0}</div>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-orange-500/5 border border-orange-500/10 rounded-xl group hover:bg-orange-500/10 transition-all cursor-pointer" onClick={() => navigate('/policies?status=EXPIRED')}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-400">
+                      <Clock className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white">Lost Clients</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Expired without renewal</p>
+                    </div>
+                  </div>
+                  <div className="text-xl font-bold text-orange-400">{summary?.lostClientsCount || 0}</div>
+                </div>
+                
+                <button 
+                  onClick={() => navigate('/messages')}
+                  className="w-full mt-2 py-3 bg-secondary/50 text-white text-[11px] font-bold rounded-xl border border-border/50 hover:bg-secondary transition-all"
+                >
+                  Manage All Alerts
+                </button>
+              </div>
+            </motion.div>
           </div>
 
           {/* ═══ MAIN ANALYTICS ═══ */}
@@ -443,13 +617,9 @@ const Dashboard: React.FC = () => {
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="p-3 rounded-lg bg-secondary/30 border border-border/30">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Sent Today</p>
+                    <div className="p-3 rounded-lg bg-secondary/30 border border-border/30 col-span-2 text-center">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Messages Sent ({period}D)</p>
                       <p className="text-lg font-bold text-white">{commStats?.messagesSentToday || 0}</p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-secondary/30 border border-border/30">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">SMS Fallback</p>
-                      <p className="text-lg font-bold text-white">{commStats?.smsFallbackCount || 0}</p>
                     </div>
                   </div>
                 </div>
@@ -527,10 +697,6 @@ const Dashboard: React.FC = () => {
                 <div className="space-y-4 pt-2">
                   <div className="flex justify-between text-[11px] font-medium border-b border-border/20 pb-3">
                     <span className="text-muted-foreground">WhatsApp API</span>
-                    <span className="text-white">Active</span>
-                  </div>
-                  <div className="flex justify-between text-[11px] font-medium border-b border-border/20 pb-3">
-                    <span className="text-muted-foreground">SMS Gateway</span>
                     <span className="text-white">Active</span>
                   </div>
                   <div className="flex justify-between text-[11px] font-medium">

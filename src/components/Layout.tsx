@@ -26,6 +26,12 @@ const navItems = [
     description: 'Manage insurance policy inventory' 
   },
   { 
+    path: '/renewals', 
+    icon: ShieldCheck, 
+    label: 'Renewals', 
+    description: 'Track successful policy renewals' 
+  },
+  { 
     path: '/messages', 
     icon: MessageSquare, 
     label: 'Message Logs', 

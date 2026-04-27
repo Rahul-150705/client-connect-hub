@@ -11,6 +11,7 @@ import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import Policies from './pages/Policies';
 import MessageLogs from './pages/MessageLogs';
+import Renewals from './pages/Renewals';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -73,6 +74,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <MessageLogs />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/renewals"
+          element={
+            <ProtectedRoute>
+              <Renewals />
             </ProtectedRoute>
           }
         />

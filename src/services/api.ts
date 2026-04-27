@@ -83,6 +83,15 @@ export const policyAPI = {
   markAsManuallyRenewed: (id: number, notes: string, renewed: boolean) =>
     api.post(`/policies/${id}/manual-renew`, { notes, renewed }),
   
+  // Confirm renewal - create new policy and delete old one
+  confirmRenewal: (id: number, renewalData: {
+    newStartDate: string;
+    newExpiryDate: string;
+    newPremium?: number;
+    notes?: string;
+    contactMethod?: string;
+  }) => api.post(`/policies/${id}/confirm-renewal`, renewalData),
+  
   // PDF storage disabled
   // uploadPdf: (file: File, clientEmail: string, policyNumber: string) => {
   //   const formData = new FormData();
@@ -135,10 +144,10 @@ export const messagesAPI = {
 
 export const dashboardAPI = {
   getSummary: (period: number = 30) => api.get(`/dashboard/summary?period=${period}`),
-  getClaimsDistribution: () => api.get('/dashboard/claims-distribution'),
-  getCommunicationStats: () => api.get('/dashboard/communication-stats'),
+  getClaimsDistribution: () => api.get('/dashboard/policy-distribution'),
+  getCommunicationStats: () => api.get('/dashboard/conversion-funnel'),
   getAiInsights: () => api.get('/dashboard/ai-insights'),
-  getProjectedRenewals: (period: number = 30) => api.get(`/dashboard/projected-renewals?period=${period}`),
+  getProjectedRenewals: (period: number = 30) => api.get(`/dashboard/renewal-trends?period=${period}`),
   getRevenueTrends: () => api.get('/dashboard/revenue-trends'),
 };
 

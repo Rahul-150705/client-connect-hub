@@ -27,6 +27,8 @@ interface Policy {
   clientAddress?: string;
   pdfFilePath?: string;
   hasPdf?: boolean;
+  renewalStatus: string;
+  manualRenewalNotes?: string;
 }
 
 const POLICY_TYPES = ['LIFE', 'HEALTH', 'VEHICLE', 'HOME', 'TRAVEL', 'BUSINESS'];
@@ -51,6 +53,15 @@ const Policies: React.FC = () => {
     maxPremium: '',
     expiryDateFrom: '',
     expiryDateTo: '',
+  });
+
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [policyToConfirm, setPolicyToConfirm] = useState<Policy | null>(null);
+  const [confirmFormData, setConfirmFormData] = useState({
+    newStartDate: format(new Date(), 'yyyy-MM-dd'),
+    newExpiryDate: format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), 'yyyy-MM-dd'),
+    newPremium: '',
+    notes: '',
   });
 
   const [formData, setFormData] = useState({
@@ -114,12 +125,32 @@ const Policies: React.FC = () => {
     }
   });
 
+  const confirmMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number, data: any }) => policyAPI.confirmRenewal(id, data),
+    onSuccess: () => {
+      showToast.success('Policy Renewed', 'A new active policy has been created and the old record has been archived.');
+      setShowConfirmModal(false);
+      setPolicyToConfirm(null);
+      queryClient.invalidateQueries({ queryKey: ['policies'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardSummary'] });
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.error || 'Renewal processing failed.';
+      showToast.error('Renewal Failed', errorMessage);
+    }
+  });
+
   useEffect(() => {
-    if (searchParams.get('action') === 'add') {
+    const action = searchParams.get('action');
+    const filterParam = searchParams.get('filter');
+
+    if (action === 'add') {
       setShowModal(true);
       setSearchParams({});
+    } else if (filterParam === 'LOST') {
+      setFilter('LOST');
     }
-  }, []);
+  }, [searchParams]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -201,6 +232,30 @@ const Policies: React.FC = () => {
     setPolicyToDelete(null);
   };
 
+  const handleConfirmRenewalClick = (policy: Policy) => {
+    setPolicyToConfirm(policy);
+    setConfirmFormData({
+      newStartDate: format(new Date(), 'yyyy-MM-dd'),
+      newExpiryDate: format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), 'yyyy-MM-dd'),
+      newPremium: policy.premium.toString(),
+      notes: `Renewed policy ${policy.policyNumber}`,
+    });
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmRenewalSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!policyToConfirm) return;
+    confirmMutation.mutate({
+      id: policyToConfirm.policyId,
+      data: {
+        ...confirmFormData,
+        newPremium: parseFloat(confirmFormData.newPremium),
+        contactMethod: 'MANUAL_DASHBOARD'
+      }
+    });
+  };
+
   const getDaysUntilExpiry = (expiryDate: string) => {
     const today = new Date();
     const expiry = new Date(expiryDate);
@@ -209,11 +264,18 @@ const Policies: React.FC = () => {
     return diffDays;
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string, renewalStatus: string) => {
+    if (status === 'ACTIVE') {
+      if (renewalStatus === 'AUTO_RENEWED' || renewalStatus === 'MANUAL_RENEWED') {
+        return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+      }
+      return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+    }
+    
     const colors: Record<string, string> = {
       ACTIVE: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
       EXPIRED: 'bg-red-500/10 text-red-400 border-red-500/20',
-      RENEWED: 'bg-primary/10 text-primary border-primary/20',
+      RENEWED: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 shadow-[0_0_10px_rgba(99,102,241,0.2)]',
       CANCELLED: 'bg-muted/10 text-muted-foreground border-muted/20',
     };
     return colors[status] || 'bg-muted/10 text-muted-foreground border-muted/20';
@@ -228,6 +290,9 @@ const Policies: React.FC = () => {
         if (!(policy.policyStatus === 'ACTIVE' && daysUntilExpiry <= 30 && daysUntilExpiry > 0)) return false;
       }
       if (filter === 'EXPIRED' && policy.policyStatus !== 'EXPIRED') return false;
+      if (filter === 'LOST') {
+        if (!(policy.policyStatus === 'EXPIRED' && policy.renewalStatus === 'PENDING')) return false;
+      }
 
       // Search query - searches across multiple fields
       if (searchQuery.trim()) {
@@ -297,6 +362,7 @@ const Policies: React.FC = () => {
       return p.policyStatus === 'ACTIVE' && days <= 30 && days > 0;
     }).length,
     expired: policies.filter(p => p.policyStatus === 'EXPIRED').length,
+    lost: policies.filter(p => p.policyStatus === 'EXPIRED' && p.renewalStatus === 'PENDING').length,
   };
 
   if (loading) {
@@ -503,7 +569,7 @@ const Policies: React.FC = () => {
 
           {/* Status Filter Tabs */}
           <div className="flex gap-2 flex-wrap pt-2">
-            {['ALL', 'ACTIVE', 'EXPIRING', 'EXPIRED'].map((f) => (
+            {['ALL', 'ACTIVE', 'EXPIRING', 'EXPIRED', 'LOST'].map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
@@ -515,7 +581,8 @@ const Policies: React.FC = () => {
                 {f === 'ALL' ? `All (${stats.total})` :
                   f === 'ACTIVE' ? `Active (${stats.active})` :
                     f === 'EXPIRING' ? `Expiring Soon (${stats.expiring})` :
-                      `Expired (${stats.expired})`}
+                      f === 'EXPIRED' ? `Expired (${stats.expired})` :
+                        `Lost (${stats.lost})`}
               </button>
             ))}
           </div>
@@ -584,9 +651,16 @@ const Policies: React.FC = () => {
                           <span className="font-mono text-sm text-foreground">{policy.policyNumber}</span>
                         </td>
                         <td className="px-4 py-4">
-                          <div className="flex items-center gap-2">
-                            <FaUser className="text-primary" />
-                            <span className="font-medium text-foreground">{policy.clientFullName}</span>
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
+                              <FaUser className="text-primary" />
+                              <span className="font-medium text-foreground">{policy.clientFullName}</span>
+                            </div>
+                            {policy.manualRenewalNotes && (
+                              <p className="text-[10px] text-muted-foreground italic mt-1 max-w-[150px] truncate" title={policy.manualRenewalNotes}>
+                                "{policy.manualRenewalNotes}"
+                              </p>
+                            )}
                           </div>
                         </td>
                         <td className="px-4 py-4">
@@ -615,10 +689,18 @@ const Policies: React.FC = () => {
                         <td className="px-4 py-4 text-sm text-foreground">
                           {format(new Date(policy.expiryDate), 'dd MMM yyyy')}
                         </td>
-                        <td className="px-4 py-4">
-                          <span className={`px-2 py-1 rounded text-xs font-medium text-white ${getStatusColor(policy.policyStatus)}`}>
-                            {policy.policyStatus}
-                          </span>
+                         <td className="px-4 py-4">
+                          <div className="flex flex-col gap-1.5">
+                            <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider text-white w-fit ${getStatusColor(policy.policyStatus, policy.renewalStatus)}`}>
+                              {policy.policyStatus}
+                            </span>
+                            {policy.renewalStatus !== 'PENDING' && (
+                              <span className="flex items-center gap-1.5 text-[9px] font-extrabold text-indigo-400 uppercase tracking-[0.2em] px-1 animate-in fade-in slide-in-from-left-2 duration-500">
+                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_5px_rgba(129,140,248,0.8)]" />
+                                {policy.renewalStatus.replace('_', ' ')}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-4">
                           {policy.policyStatus === 'ACTIVE' ? (
@@ -632,15 +714,25 @@ const Policies: React.FC = () => {
                             <span className="text-muted-foreground">-</span>
                           )}
                         </td>
-                        <td className="px-4 py-4">
-                          <button
-                            onClick={() => handleDeleteClick(policy)}
-                            className="p-2 rounded-lg text-destructive hover:bg-destructive/10 
-                              transition-all duration-200"
-                            title="Delete policy"
-                          >
-                            <FaTrash />
-                          </button>
+                         <td className="px-4 py-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleConfirmRenewalClick(policy)}
+                              className="p-2 rounded-lg text-primary hover:bg-primary/10 
+                                transition-all duration-200"
+                              title="Confirm Renewal"
+                            >
+                              <FaCheckCircle />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteClick(policy)}
+                              className="p-2 rounded-lg text-destructive hover:bg-destructive/10 
+                                transition-all duration-200"
+                              title="Delete policy"
+                            >
+                              <FaTrash />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -764,6 +856,98 @@ const Policies: React.FC = () => {
                     </button>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Confirm Renewal Modal */}
+        {showConfirmModal && policyToConfirm && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4"
+            onClick={() => setShowConfirmModal(false)}
+          >
+            <div
+              className="w-full max-w-md bg-card rounded-2xl border border-border shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-6 border-b border-border">
+                <h2 className="text-xl font-bold text-foreground">Confirm Renewal</h2>
+                <button
+                  onClick={() => setShowConfirmModal(false)}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground
+                    hover:bg-secondary hover:text-foreground transition-all"
+                >
+                  <FaTimes />
+                </button>
+              </div>
+
+              <form onSubmit={handleConfirmRenewalSubmit} className="p-6 space-y-4">
+                <div className="p-3 bg-primary/5 border border-primary/10 rounded-lg text-xs text-muted-foreground">
+                  Renewing: <span className="text-foreground font-bold">{policyToConfirm.policyNumber}</span> for <span className="text-foreground font-bold">{policyToConfirm.clientFullName}</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">New Start Date</label>
+                    <Input
+                      type="date"
+                      required
+                      value={confirmFormData.newStartDate}
+                      onChange={(e) => setConfirmFormData({ ...confirmFormData, newStartDate: e.target.value })}
+                      className="bg-secondary border-border"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">New Expiry Date</label>
+                    <Input
+                      type="date"
+                      required
+                      value={confirmFormData.newExpiryDate}
+                      onChange={(e) => setConfirmFormData({ ...confirmFormData, newExpiryDate: e.target.value })}
+                      className="bg-secondary border-border"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">New Premium (₹)</label>
+                  <Input
+                    type="number"
+                    required
+                    value={confirmFormData.newPremium}
+                    onChange={(e) => setConfirmFormData({ ...confirmFormData, newPremium: e.target.value })}
+                    className="bg-secondary border-border"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Renewal Notes</label>
+                  <textarea
+                    rows={3}
+                    value={confirmFormData.notes}
+                    onChange={(e) => setConfirmFormData({ ...confirmFormData, notes: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Enter notes about this renewal..."
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmModal(false)}
+                    className="px-4 py-2 rounded-lg bg-secondary text-foreground font-medium hover:bg-secondary/80 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={confirmMutation.isPending}
+                    className="px-4 py-2 rounded-lg bg-primary text-white font-medium hover:opacity-90 transition-all disabled:opacity-50"
+                  >
+                    {confirmMutation.isPending ? 'Processing...' : 'Confirm & Renew'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
