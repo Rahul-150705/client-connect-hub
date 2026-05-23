@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Navbar from '@/components/landing/Navbar';
-import HeroSplineBackground from '@/components/landing/HeroSplineBackground';
+import HeroBackground from '@/components/landing/HeroBackground';
 import HeroContent from '@/components/landing/HeroContent';
 import ScreenshotSection from '@/components/landing/ScreenshotSection';
 import Features from '@/components/landing/Features';
@@ -39,7 +39,7 @@ const Landing = () => {
 
       {/* Hero */}
       <section className="relative h-screen w-full flex items-center">
-        <HeroSplineBackground />
+        <HeroBackground />
         <HeroContent opacity={heroOpacity} />
       </section>
 

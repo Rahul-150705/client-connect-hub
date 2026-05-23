@@ -12,8 +12,8 @@ const ScreenshotSection = forwardRef<HTMLDivElement>((_, ref) => {
             <span className="ml-3 text-[11px] text-white/40">app.insurly.com/dashboard</span>
           </div>
           <img
-            src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1600&q=80"
-            alt="Insurly dashboard preview"
+            src="/dashboard-preview.png"
+            alt="Renew AI dashboard preview"
             className="w-full aspect-[16/9] object-cover"
             loading="lazy"
           />
