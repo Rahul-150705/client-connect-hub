@@ -167,7 +167,7 @@ const Login: React.FC = () => {
 
             <div className="mt-5 p-3 rounded-xl bg-primary/5 border border-primary/15 text-center">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-0.5">Demo Credentials</p>
-              <p className="text-sm font-mono font-medium text-foreground">agent1 / password123</p>
+              <p className="text-sm font-mono font-medium text-foreground">rahul1 / rahul1818</p>
             </div>
 
             <p className="text-center text-sm text-muted-foreground mt-5">
