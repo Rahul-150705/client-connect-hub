@@ -19,16 +19,15 @@ import { GlassTooltip } from '../components/premium/GlassTooltip';
 import { DashboardSkeleton } from '../components/premium/ShimmerSkeleton';
 
 // ── Professional Palette ──────────────────────────────────────
-const DONUT_COLORS = ['#3b82f6', '#6366f1', '#94a3b8', '#475569', '#1e293b', '#0f172a'];
+const DONUT_COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#475569', '#1e293b'];
 
 const CHART_TOOLTIP_STYLE = {
-  backgroundColor: '#0f172a',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
-  borderRadius: '8px',
+  backgroundColor: '#111118',
+  border: '1px solid rgba(255,255,255,0.08)',
+  borderRadius: '12px',
   color: '#fff',
   fontSize: '12px',
-  padding: '12px',
-  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
+  padding: '10px 12px',
 };
 
 const Dashboard: React.FC = () => {
@@ -153,27 +152,21 @@ const Dashboard: React.FC = () => {
           animate="visible"
         >
           {/* ═══ HEADER ═══ */}
-          <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b border-border/50">
+          <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b border-white/5">
             <div>
-              <div className="flex items-center gap-2 text-primary font-bold text-[10px] uppercase tracking-[0.2em] mb-3">
-                <LayoutDashboard className="w-3.5 h-3.5" />
-                <span>Enterprise Dashboard</span>
-              </div>
-              <h1 className="text-4xl font-extrabold tracking-tight text-white">
-                Portfolio Performance
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Good morning{user?.fullName ? `, ${user.fullName.split(' ')[0]}` : ''}
               </h1>
-              <p className="text-muted-foreground mt-2 text-sm max-w-lg">
-                Overview of your insurance portfolio, renewal tracking, and automated communication performance.
-              </p>
+              <p className="text-white/40 mt-2 text-sm">Portfolio overview</p>
             </div>
             
             <div className="flex items-center gap-4">
-                  <div className="flex bg-secondary/50 p-1 rounded-xl border border-border/50">
+                  <div className="flex bg-[#111118] p-1 rounded-xl border border-white/5">
                 {[7, 30, 90].map(p => (
                   <button 
                     key={p}
                     onClick={() => setPeriod(p)}
-                    className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${period === p ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-white'}`}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${period === p ? 'bg-indigo-600 text-white' : 'text-white/50 hover:text-white'}`}
                   >
                     {p}D
                   </button>
@@ -181,7 +174,7 @@ const Dashboard: React.FC = () => {
               </div>
               <button 
                 onClick={() => navigate('/policies?action=add')}
-                className="flex items-center gap-2 bg-primary text-white px-5 py-2 rounded-lg text-sm font-bold hover:opacity-90 transition-all"
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-xl text-sm font-semibold transition-all"
               >
                 <Plus className="w-4 h-4" /> New Policy
               </button>
