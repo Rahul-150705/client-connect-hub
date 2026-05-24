@@ -259,30 +259,23 @@ const MessageLogs: React.FC = () => {
 
   return (
     <Layout>
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6">
-        <div className="relative">
-          <div className="w-24 h-24 rounded-3xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 animate-pulse">
-            <FaExclamationTriangle className="text-4xl text-amber-500" />
-          </div>
-          <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-background border border-border flex items-center justify-center">
-            <div className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-          </div>
+      <div className="max-w-lg mx-auto mt-20 bg-[#111118] border border-white/5 rounded-2xl p-12 sm:p-16 text-center space-y-6">
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl w-20 h-20 mx-auto flex items-center justify-center">
+          <FaExclamationTriangle className="text-3xl text-amber-400" />
         </div>
-        
-        <div className="max-w-md space-y-2">
-          <h1 className="text-3xl font-black tracking-tight text-white uppercase">Logs Under Maintenance</h1>
-          <p className="text-muted-foreground text-sm font-medium">
-            We are currently optimizing the delivery tracking system for better WhatsApp integration. Message history and retry actions will be back online shortly.
+        <div className="space-y-2">
+          <h1 className="text-2xl font-semibold text-white tracking-tight">Logs Under Maintenance</h1>
+          <p className="text-sm text-white/50 leading-relaxed">
+            We're optimizing delivery tracking for tighter WhatsApp integration. Message history and retry actions will be back online shortly.
           </p>
         </div>
-
-        <div className="flex items-center gap-3 pt-4">
-          <div className="px-4 py-2 rounded-full bg-secondary border border-border text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-            Expected Resolution: 2 Hours
-          </div>
-          <div className="px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-bold text-primary uppercase tracking-widest">
-            System Status: Active
-          </div>
+        <div className="flex flex-wrap justify-center gap-2 pt-2">
+          <span className="rounded-full bg-white/5 border border-white/10 px-3 py-1 text-[10px] font-medium text-white/60 uppercase tracking-widest">
+            ETA · 2 Hours
+          </span>
+          <span className="rounded-full bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 text-[10px] font-medium text-indigo-400 uppercase tracking-widest">
+            System · Active
+          </span>
         </div>
       </div>
     </Layout>
