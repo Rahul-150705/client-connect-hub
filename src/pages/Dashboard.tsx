@@ -334,8 +334,8 @@ const Dashboard: React.FC = () => {
                   <AreaChart data={areaChartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1}/>
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.02)" />
@@ -358,11 +358,11 @@ const Dashboard: React.FC = () => {
                     <Area 
                       type="monotone" 
                       dataKey="policies" 
-                      stroke="#3b82f6" 
+                      stroke="#6366f1" 
                       strokeWidth={2} 
                       fillOpacity={1} 
                       fill="url(#chartGrad)" 
-                      activeDot={{ r: 4, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }} 
+                      activeDot={{ r: 4, fill: '#6366f1', stroke: '#fff', strokeWidth: 2 }} 
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -450,14 +450,14 @@ const Dashboard: React.FC = () => {
                   />
                   <Bar 
                     dataKey="amount" 
-                    fill="#3b82f6" 
+                    fill="#6366f1" 
                     radius={[4, 4, 0, 0]}
                     barSize={40}
                   >
                     {revenueChartData.map((_entry, index) => (
                       <Cell 
                         key={`cell-${index}`} 
-                        fill={index === new Date().getMonth() ? '#6366f1' : '#3b82f6'} 
+                        fill={index === new Date().getMonth() ? '#6366f1' : '#6366f1'} 
                         fillOpacity={0.8}
                       />
                     ))}
