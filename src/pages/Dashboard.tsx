@@ -287,9 +287,9 @@ const Dashboard: React.FC = () => {
                   <div className="text-xl font-bold text-rose-400">{summary?.exhaustedRetriesCount || 0}</div>
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-orange-500/5 border border-orange-500/10 rounded-xl group hover:bg-orange-500/10 transition-all cursor-pointer" onClick={() => navigate('/policies?status=EXPIRED')}>
+                <div className="flex items-center justify-between p-4 bg-violet-500/5 border border-violet-500/10 rounded-xl group hover:bg-violet-500/10 transition-all cursor-pointer" onClick={() => navigate('/policies?status=EXPIRED')}>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-400">
+                    <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-400">
                       <Clock className="w-5 h-5" />
                     </div>
                     <div>
@@ -297,7 +297,7 @@ const Dashboard: React.FC = () => {
                       <p className="text-[10px] text-muted-foreground mt-0.5">Expired without renewal</p>
                     </div>
                   </div>
-                  <div className="text-xl font-bold text-orange-400">{summary?.lostClientsCount || 0}</div>
+                  <div className="text-xl font-bold text-violet-400">{summary?.lostClientsCount || 0}</div>
                 </div>
                 
                 <button 
