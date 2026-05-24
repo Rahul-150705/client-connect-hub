@@ -17,23 +17,24 @@ import { Sparkline } from '../components/premium/Sparkline';
 import { GlassTooltip } from '../components/premium/GlassTooltip';
 
 import { DashboardSkeleton } from '../components/premium/ShimmerSkeleton';
+import { useAuth } from '../context/AuthContext';
 
 // ── Professional Palette ──────────────────────────────────────
-const DONUT_COLORS = ['#3b82f6', '#6366f1', '#94a3b8', '#475569', '#1e293b', '#0f172a'];
+const DONUT_COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#475569', '#1e293b'];
 
 const CHART_TOOLTIP_STYLE = {
-  backgroundColor: '#0f172a',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
-  borderRadius: '8px',
+  backgroundColor: '#111118',
+  border: '1px solid rgba(255,255,255,0.08)',
+  borderRadius: '12px',
   color: '#fff',
   fontSize: '12px',
-  padding: '12px',
-  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
+  padding: '10px 12px',
 };
 
 const Dashboard: React.FC = () => {
   const [period, setPeriod] = useState(30);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
 
   const policiesQuery = useQuery({
@@ -153,27 +154,21 @@ const Dashboard: React.FC = () => {
           animate="visible"
         >
           {/* ═══ HEADER ═══ */}
-          <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b border-border/50">
+          <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b border-white/5">
             <div>
-              <div className="flex items-center gap-2 text-primary font-bold text-[10px] uppercase tracking-[0.2em] mb-3">
-                <LayoutDashboard className="w-3.5 h-3.5" />
-                <span>Enterprise Dashboard</span>
-              </div>
-              <h1 className="text-4xl font-extrabold tracking-tight text-white">
-                Portfolio Performance
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white">
+                Good morning{user?.fullName ? `, ${user.fullName.split(' ')[0]}` : ''}
               </h1>
-              <p className="text-muted-foreground mt-2 text-sm max-w-lg">
-                Overview of your insurance portfolio, renewal tracking, and automated communication performance.
-              </p>
+              <p className="text-white/40 mt-2 text-sm">Portfolio overview</p>
             </div>
             
             <div className="flex items-center gap-4">
-                  <div className="flex bg-secondary/50 p-1 rounded-xl border border-border/50">
+                  <div className="flex bg-[#111118] p-1 rounded-xl border border-white/5">
                 {[7, 30, 90].map(p => (
                   <button 
                     key={p}
                     onClick={() => setPeriod(p)}
-                    className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${period === p ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-white'}`}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${period === p ? 'bg-indigo-600 text-white' : 'text-white/50 hover:text-white'}`}
                   >
                     {p}D
                   </button>
@@ -181,105 +176,31 @@ const Dashboard: React.FC = () => {
               </div>
               <button 
                 onClick={() => navigate('/policies?action=add')}
-                className="flex items-center gap-2 bg-primary text-white px-5 py-2 rounded-lg text-sm font-bold hover:opacity-90 transition-all"
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-xl text-sm font-semibold transition-all"
               >
                 <Plus className="w-4 h-4" /> New Policy
               </button>
             </div>
           </motion.div>
 
-          {/* ═══ MASTER METRICS (High Priority) ═══ */}
-          <div className="flex flex-col gap-6 mb-8">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Total Policies Card */}
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-card border border-border/60 rounded-3xl p-8 relative overflow-hidden group hover:border-primary/40 transition-all shadow-2xl"
-              >
-                <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity">
-                  <ShieldCheck className="w-32 h-32" />
-                </div>
-                <div className="relative z-10">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                      <ShieldCheck className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">Total Portfolio</p>
-                      <h2 className="text-4xl font-black text-white">{stats.total}</h2>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between mt-6">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Global Assets Managed</span>
-                    <div className="h-1.5 w-48 bg-secondary rounded-full overflow-hidden">
-                      <div className="h-full bg-primary w-full shadow-[0_0_10px_rgba(59,130,246,0.4)]" />
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Lost Clients Card (Clickable) */}
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                onClick={() => navigate('/policies?filter=LOST')}
-                className="bg-card border border-border/60 rounded-3xl p-8 relative overflow-hidden group hover:border-rose-500/40 transition-all shadow-2xl cursor-pointer"
-              >
-                <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity">
-                  <AlertTriangle className="w-32 h-32" />
-                </div>
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-400">
-                        <AlertTriangle className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">Lost Clients</p>
-                        <h2 className="text-4xl font-black text-white">{summary?.lostClientsCount || 0}</h2>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/20">Action Required</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between mt-6">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Unconfirmed Renewals</span>
-                    <div className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest group-hover:gap-3 transition-all">
-                      Click to view <ArrowRight className="w-3 h-3" />
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          </div>
-
-          {/* ═══ STATS GRID (Secondary Metrics) ═══ */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* ═══ KPI ROW ═══ */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: 'Expiring Premium', value: `₹${(stats.activePremium || 0).toLocaleString()}`, icon: FileText, color: 'text-emerald-400', sparkColor: '#10b981', trend: `${(summary?.revenueGrowthPercentage || 0) >= 0 ? '+' : ''}${(summary?.revenueGrowthPercentage || 0).toFixed(1)}%` },
-              { label: 'Expiring Soon', value: stats.expiring, icon: Clock, color: 'text-warning', sparkColor: '#f59e0b', trend: stats.expiring > 10 ? 'Critical' : 'Stable' },
-              { label: 'Renewed This Month', value: stats.renewedThisMonth, icon: TrendingUp, color: 'text-indigo-400', sparkColor: '#6366f1', trend: 'Monthly Target' },
+              { label: 'Total Policies', value: stats.total, valueClass: 'text-white', sparkColor: '#6366f1', onClick: undefined },
+              { label: 'Expiring Soon', value: stats.expiring, valueClass: 'text-amber-400', sparkColor: '#f59e0b', onClick: () => navigate('/policies?status=EXPIRING') },
+              { label: 'Lost Clients', value: summary?.lostClientsCount || 0, valueClass: 'text-rose-400', sparkColor: '#f43f5e', onClick: () => navigate('/policies?filter=LOST') },
+              { label: 'Renewed This Month', value: stats.renewedThisMonth, valueClass: 'text-emerald-400', sparkColor: '#10b981', onClick: undefined },
             ].map((stat, i) => (
-              <motion.div 
+              <motion.div
                 key={i}
                 variants={itemVariants}
-                className="bg-card border border-border/40 rounded-xl p-6 transition-all hover:border-border/80"
+                onClick={stat.onClick}
+                className={`bg-[#111118] border border-white/5 rounded-2xl p-5 backdrop-blur-sm transition-all hover:border-indigo-500/30 ${stat.onClick ? 'cursor-pointer' : ''}`}
               >
-                <div className="flex justify-between items-start mb-6">
-                  <div className={`w-10 h-10 rounded-lg bg-secondary flex items-center justify-center ${stat.color}`}>
-                    <stat.icon className="w-5 h-5" />
-                  </div>
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full bg-secondary border border-border/50 ${stat.trend.includes('+') ? 'text-emerald-400' : 'text-warning'}`}>
-                    {stat.trend}
-                  </span>
-                </div>
-                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">{stat.label}</p>
-                <h2 className="text-3xl font-bold text-white mt-1">{stat.value}</h2>
-                <div className="mt-6">
-                  <Sparkline data={sparkData} color={stat.sparkColor} width={140} height={20} fill={false} />
+                <p className="text-[10px] font-medium text-white/40 uppercase tracking-widest">{stat.label}</p>
+                <div className="flex items-end justify-between mt-3">
+                  <h2 className={`text-3xl font-bold ${stat.valueClass}`}>{stat.value}</h2>
+                  <Sparkline data={sparkData} color={stat.sparkColor} width={80} height={24} fill={false} />
                 </div>
               </motion.div>
             ))}
@@ -366,9 +287,9 @@ const Dashboard: React.FC = () => {
                   <div className="text-xl font-bold text-rose-400">{summary?.exhaustedRetriesCount || 0}</div>
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-orange-500/5 border border-orange-500/10 rounded-xl group hover:bg-orange-500/10 transition-all cursor-pointer" onClick={() => navigate('/policies?status=EXPIRED')}>
+                <div className="flex items-center justify-between p-4 bg-violet-500/5 border border-violet-500/10 rounded-xl group hover:bg-violet-500/10 transition-all cursor-pointer" onClick={() => navigate('/policies?status=EXPIRED')}>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-400">
+                    <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-400">
                       <Clock className="w-5 h-5" />
                     </div>
                     <div>
@@ -376,7 +297,7 @@ const Dashboard: React.FC = () => {
                       <p className="text-[10px] text-muted-foreground mt-0.5">Expired without renewal</p>
                     </div>
                   </div>
-                  <div className="text-xl font-bold text-orange-400">{summary?.lostClientsCount || 0}</div>
+                  <div className="text-xl font-bold text-violet-400">{summary?.lostClientsCount || 0}</div>
                 </div>
                 
                 <button 
@@ -413,8 +334,8 @@ const Dashboard: React.FC = () => {
                   <AreaChart data={areaChartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1}/>
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.02)" />
@@ -437,11 +358,11 @@ const Dashboard: React.FC = () => {
                     <Area 
                       type="monotone" 
                       dataKey="policies" 
-                      stroke="#3b82f6" 
+                      stroke="#6366f1" 
                       strokeWidth={2} 
                       fillOpacity={1} 
                       fill="url(#chartGrad)" 
-                      activeDot={{ r: 4, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }} 
+                      activeDot={{ r: 4, fill: '#6366f1', stroke: '#fff', strokeWidth: 2 }} 
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -529,14 +450,14 @@ const Dashboard: React.FC = () => {
                   />
                   <Bar 
                     dataKey="amount" 
-                    fill="#3b82f6" 
+                    fill="#6366f1" 
                     radius={[4, 4, 0, 0]}
                     barSize={40}
                   >
                     {revenueChartData.map((_entry, index) => (
                       <Cell 
                         key={`cell-${index}`} 
-                        fill={index === new Date().getMonth() ? '#6366f1' : '#3b82f6'} 
+                        fill={index === new Date().getMonth() ? '#6366f1' : '#6366f1'} 
                         fillOpacity={0.8}
                       />
                     ))}
