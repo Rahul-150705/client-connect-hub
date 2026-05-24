@@ -20,6 +20,12 @@ const navItems = [
     description: 'System overview & real-time KPIs' 
   },
   { 
+    path: '/chat', 
+    icon: MessageSquare, 
+    label: 'AI Chat', 
+    description: 'Ask questions about your data' 
+  },
+  { 
     path: '/policies', 
     icon: FileText, 
     label: 'Policies', 

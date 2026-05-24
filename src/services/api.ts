@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Base API URL — uses env var in production, falls back to localhost for dev
-const API_BASE_URL = 'https://renew-ai.onrender.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
 // Create axios instance
 const api = axios.create({
@@ -149,6 +149,10 @@ export const dashboardAPI = {
   getAiInsights: () => api.get('/dashboard/ai-insights'),
   getProjectedRenewals: (period: number = 30) => api.get(`/dashboard/renewal-trends?period=${period}`),
   getRevenueTrends: () => api.get('/dashboard/revenue-trends'),
+};
+
+export const agentAPI = {
+  askQuestion: (question: string, history: any[] = []) => api.post<{ answer: string }>('/agent/ask', { question, history }),
 };
 
 export default api;

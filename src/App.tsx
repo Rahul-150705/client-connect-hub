@@ -9,6 +9,7 @@ import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
+import Chat from './pages/Chat';
 import Policies from './pages/Policies';
 import MessageLogs from './pages/MessageLogs';
 import Renewals from './pages/Renewals';
@@ -58,6 +59,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chat"
+          element={
+            <ProtectedRoute>
+              <Chat />
             </ProtectedRoute>
           }
         />
