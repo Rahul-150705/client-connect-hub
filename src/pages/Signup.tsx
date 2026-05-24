@@ -85,24 +85,17 @@ const Signup: React.FC = () => {
   };
 
   const inputClass = (field: string) =>
-    `w-full px-3.5 py-2.5 rounded-xl bg-background/80 border text-sm text-foreground placeholder:text-muted-foreground/60
-     focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50 transition-all
-     ${errors[field] ? 'border-red-500/50' : 'border-border/50'}`;
+    `w-full bg-white/5 border rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-indigo-500/50 focus:ring-0 focus:outline-none transition-colors ${errors[field] ? 'border-rose-500/50' : 'border-white/10'}`;
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-background flex items-stretch relative overflow-hidden">
-      {/* Ambient orbs */}
-      <div className="absolute top-[-200px] left-[-100px] w-[500px] h-[500px] bg-accent/6 rounded-full blur-[150px] pointer-events-none" />
-      <div className="absolute bottom-[-150px] right-[-100px] w-[400px] h-[400px] bg-primary/6 rounded-full blur-[120px] pointer-events-none" />
-
-      {/* Left: Spline Robot */}
-      <div className="hidden lg:flex lg:w-1/2 items-center justify-center relative">
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="w-80 h-80 bg-accent/10 rounded-full blur-[100px]" />
-        </div>
+    <div ref={containerRef} className="min-h-screen bg-[#0a0a0f] flex items-stretch relative overflow-hidden">
+      {/* Left: Spline */}
+      <div className="hidden lg:flex lg:w-1/2 relative bg-[#0d0d14] items-center justify-center overflow-hidden">
+        <div className="absolute top-[-120px] right-[-120px] w-[420px] h-[420px] bg-violet-500/20 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-120px] left-[-120px] w-[420px] h-[420px] bg-indigo-500/20 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1.5s' }} />
         <div
           ref={robotRef}
-          className="relative w-full max-w-lg h-[500px]"
+          className="relative w-full max-w-lg h-[520px]"
           style={{ willChange: 'transform' }}
         >
           <SplineScene
@@ -110,75 +103,78 @@ const Signup: React.FC = () => {
             className="w-full h-full"
           />
         </div>
+        <div className="absolute bottom-10 left-0 right-0 px-12 flex flex-col items-center gap-5">
+          <div className="flex flex-wrap gap-2 justify-center">
+            {['AI-Powered', 'WhatsApp Ready', 'Real-time Analytics'].map((t) => (
+              <span key={t} className="flex items-center gap-2 border border-white/10 rounded-full px-3 py-1 text-xs text-white/70">
+                <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+                {t}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Right: Signup Form */}
+      {/* Right: Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12">
-        <div className="w-full max-w-md">
-          {/* Logo */}
-          <div className="flex items-center gap-3 mb-10">
-            <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow">
-              <ShieldCheck className="text-white w-6 h-6" />
+        <div className="w-full max-w-sm">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center shadow-glow">
+              <ShieldCheck className="text-white w-5 h-5" />
             </div>
-            <span className="text-2xl font-bold text-foreground tracking-tight">Renew AI</span>
+            <span className="text-xl font-semibold text-white tracking-tight">Renew AI</span>
           </div>
 
-          {/* Card */}
-          <div className="bg-card/60 backdrop-blur-2xl border border-border/50 rounded-2xl p-8 shadow-2xl">
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold text-foreground tracking-tight">Create your account</h1>
-              <p className="text-sm text-muted-foreground mt-1">Start automating insurance renewals today</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Create your account</h1>
+          <p className="text-sm text-white/50 mt-1 mb-8">Start automating renewals today</p>
+
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="fullName" className="block text-xs font-medium text-white/70 mb-2 uppercase tracking-wider">Full name</label>
+                <input type="text" id="fullName" name="fullName" placeholder="John Doe"
+                  className={inputClass('fullName')} value={formData.fullName} onChange={handleChange} disabled={loading} />
+                {errors.fullName && <p className="text-rose-400 text-xs mt-1">{errors.fullName}</p>}
+              </div>
+              <div>
+                <label htmlFor="username" className="block text-xs font-medium text-white/70 mb-2 uppercase tracking-wider">Username</label>
+                <input type="text" id="username" name="username" placeholder="johndoe"
+                  className={inputClass('username')} value={formData.username} onChange={handleChange} disabled={loading} />
+                {errors.username && <p className="text-rose-400 text-xs mt-1">{errors.username}</p>}
+              </div>
             </div>
 
-            <form onSubmit={handleSubmit} noValidate className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="fullName" className="block text-sm font-medium text-foreground mb-1.5">Full Name</label>
-                  <input type="text" id="fullName" name="fullName" placeholder="John Doe"
-                    className={inputClass('fullName')} value={formData.fullName} onChange={handleChange} disabled={loading} />
-                  {errors.fullName && <p className="text-red-400 text-xs mt-1">{errors.fullName}</p>}
-                </div>
-                <div>
-                  <label htmlFor="username" className="block text-sm font-medium text-foreground mb-1.5">Username</label>
-                  <input type="text" id="username" name="username" placeholder="johndoe"
-                    className={inputClass('username')} value={formData.username} onChange={handleChange} disabled={loading} />
-                  {errors.username && <p className="text-red-400 text-xs mt-1">{errors.username}</p>}
-                </div>
+            <div>
+              <label htmlFor="email" className="block text-xs font-medium text-white/70 mb-2 uppercase tracking-wider">Email</label>
+              <input type="email" id="email" name="email" placeholder="you@example.com"
+                className={inputClass('email')} value={formData.email} onChange={handleChange} disabled={loading} />
+              {errors.email && <p className="text-rose-400 text-xs mt-1">{errors.email}</p>}
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-xs font-medium text-white/70 mb-2 uppercase tracking-wider">Password</label>
+              <div className="relative">
+                <input type={showPassword ? 'text' : 'password'} id="password" name="password" placeholder="••••••••"
+                  className={`${inputClass('password')} pr-11`}
+                  value={formData.password} onChange={handleChange} disabled={loading} />
+                <button type="button" onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors">
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
+              {errors.password && <p className="text-rose-400 text-xs mt-1">{errors.password}</p>}
+            </div>
 
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1.5">Email</label>
-                <input type="email" id="email" name="email" placeholder="you@example.com"
-                  className={inputClass('email')} value={formData.email} onChange={handleChange} disabled={loading} />
-                {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
-              </div>
+            <button type="submit" disabled={loading}
+              className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl py-3 font-semibold text-sm transition-all disabled:opacity-60">
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Create Account <ArrowRight className="w-4 h-4" /></>}
+            </button>
+          </form>
 
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1.5">Password</label>
-                <div className="relative">
-                  <input type={showPassword ? 'text' : 'password'} id="password" name="password" placeholder="••••••••"
-                    className={`${inputClass('password')} pr-10`}
-                    value={formData.password} onChange={handleChange} disabled={loading} />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
-              </div>
-
-              <button type="submit" disabled={loading}
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-gradient-primary text-white font-semibold text-sm
-                  hover:opacity-90 hover:shadow-glow active:scale-[0.98] transition-all disabled:opacity-60">
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Create Account <ArrowRight className="w-4 h-4" /></>}
-              </button>
-            </form>
-
-            <p className="text-center text-sm text-muted-foreground mt-5">
-              Already have an account?{' '}
-              <Link to="/login" className="text-primary font-medium hover:underline transition-colors">Sign in</Link>
-            </p>
-          </div>
+          <p className="text-center text-sm text-white/50 mt-6">
+            Already have an account?{' '}
+            <Link to="/login" className="text-indigo-400 font-medium hover:text-indigo-300">Sign in</Link>
+          </p>
         </div>
       </div>
     </div>
