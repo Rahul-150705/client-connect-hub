@@ -17,6 +17,7 @@ import { Sparkline } from '../components/premium/Sparkline';
 import { GlassTooltip } from '../components/premium/GlassTooltip';
 
 import { DashboardSkeleton } from '../components/premium/ShimmerSkeleton';
+import { useAuth } from '../context/AuthContext';
 
 // ── Professional Palette ──────────────────────────────────────
 const DONUT_COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#475569', '#1e293b'];
@@ -33,6 +34,7 @@ const CHART_TOOLTIP_STYLE = {
 const Dashboard: React.FC = () => {
   const [period, setPeriod] = useState(30);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
 
   const policiesQuery = useQuery({
