@@ -183,98 +183,24 @@ const Dashboard: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* ═══ MASTER METRICS (High Priority) ═══ */}
-          <div className="flex flex-col gap-6 mb-8">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Total Policies Card */}
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-card border border-border/60 rounded-3xl p-8 relative overflow-hidden group hover:border-primary/40 transition-all shadow-2xl"
-              >
-                <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity">
-                  <ShieldCheck className="w-32 h-32" />
-                </div>
-                <div className="relative z-10">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                      <ShieldCheck className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">Total Portfolio</p>
-                      <h2 className="text-4xl font-black text-white">{stats.total}</h2>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between mt-6">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Global Assets Managed</span>
-                    <div className="h-1.5 w-48 bg-secondary rounded-full overflow-hidden">
-                      <div className="h-full bg-primary w-full shadow-[0_0_10px_rgba(59,130,246,0.4)]" />
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Lost Clients Card (Clickable) */}
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                onClick={() => navigate('/policies?filter=LOST')}
-                className="bg-card border border-border/60 rounded-3xl p-8 relative overflow-hidden group hover:border-rose-500/40 transition-all shadow-2xl cursor-pointer"
-              >
-                <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity">
-                  <AlertTriangle className="w-32 h-32" />
-                </div>
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-400">
-                        <AlertTriangle className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">Lost Clients</p>
-                        <h2 className="text-4xl font-black text-white">{summary?.lostClientsCount || 0}</h2>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <span className="text-[10px] font-black text-rose-400 uppercase tracking-widest bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/20">Action Required</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between mt-6">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Unconfirmed Renewals</span>
-                    <div className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest group-hover:gap-3 transition-all">
-                      Click to view <ArrowRight className="w-3 h-3" />
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          </div>
-
-          {/* ═══ STATS GRID (Secondary Metrics) ═══ */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* ═══ KPI ROW ═══ */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: 'Expiring Premium', value: `₹${(stats.activePremium || 0).toLocaleString()}`, icon: FileText, color: 'text-emerald-400', sparkColor: '#10b981', trend: `${(summary?.revenueGrowthPercentage || 0) >= 0 ? '+' : ''}${(summary?.revenueGrowthPercentage || 0).toFixed(1)}%` },
-              { label: 'Expiring Soon', value: stats.expiring, icon: Clock, color: 'text-warning', sparkColor: '#f59e0b', trend: stats.expiring > 10 ? 'Critical' : 'Stable' },
-              { label: 'Renewed This Month', value: stats.renewedThisMonth, icon: TrendingUp, color: 'text-indigo-400', sparkColor: '#6366f1', trend: 'Monthly Target' },
+              { label: 'Total Policies', value: stats.total, valueClass: 'text-white', sparkColor: '#6366f1', onClick: undefined },
+              { label: 'Expiring Soon', value: stats.expiring, valueClass: 'text-amber-400', sparkColor: '#f59e0b', onClick: () => navigate('/policies?status=EXPIRING') },
+              { label: 'Lost Clients', value: summary?.lostClientsCount || 0, valueClass: 'text-rose-400', sparkColor: '#f43f5e', onClick: () => navigate('/policies?filter=LOST') },
+              { label: 'Renewed This Month', value: stats.renewedThisMonth, valueClass: 'text-emerald-400', sparkColor: '#10b981', onClick: undefined },
             ].map((stat, i) => (
-              <motion.div 
+              <motion.div
                 key={i}
                 variants={itemVariants}
-                className="bg-card border border-border/40 rounded-xl p-6 transition-all hover:border-border/80"
+                onClick={stat.onClick}
+                className={`bg-[#111118] border border-white/5 rounded-2xl p-5 backdrop-blur-sm transition-all hover:border-indigo-500/30 ${stat.onClick ? 'cursor-pointer' : ''}`}
               >
-                <div className="flex justify-between items-start mb-6">
-                  <div className={`w-10 h-10 rounded-lg bg-secondary flex items-center justify-center ${stat.color}`}>
-                    <stat.icon className="w-5 h-5" />
-                  </div>
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full bg-secondary border border-border/50 ${stat.trend.includes('+') ? 'text-emerald-400' : 'text-warning'}`}>
-                    {stat.trend}
-                  </span>
-                </div>
-                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">{stat.label}</p>
-                <h2 className="text-3xl font-bold text-white mt-1">{stat.value}</h2>
-                <div className="mt-6">
-                  <Sparkline data={sparkData} color={stat.sparkColor} width={140} height={20} fill={false} />
+                <p className="text-[10px] font-medium text-white/40 uppercase tracking-widest">{stat.label}</p>
+                <div className="flex items-end justify-between mt-3">
+                  <h2 className={`text-3xl font-bold ${stat.valueClass}`}>{stat.value}</h2>
+                  <Sparkline data={sparkData} color={stat.sparkColor} width={80} height={24} fill={false} />
                 </div>
               </motion.div>
             ))}
