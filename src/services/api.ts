@@ -152,7 +152,15 @@ export const dashboardAPI = {
 };
 
 export const agentAPI = {
-  askQuestion: (question: string, history: any[] = []) => api.post<{ answer: string }>('/agent/ask', { question, history }),
+  askQuestion: (question: string, history: any[] = [], sessionMemory: any = {}) => 
+    api.post<any>('/agent/ask', { 
+      question, 
+      history,
+      lastSql: sessionMemory.lastSql,
+      lastTopic: sessionMemory.lastTopic,
+      lastResultSummary: sessionMemory.lastResultSummary,
+      lastCategories: sessionMemory.lastCategories
+    }),
 };
 
 export default api;

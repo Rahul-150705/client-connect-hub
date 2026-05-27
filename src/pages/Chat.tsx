@@ -4,11 +4,20 @@ import { Send, Bot, User, Sparkles, Trash2, ArrowDownCircle, Loader2 } from 'luc
 import Layout from '../components/Layout';
 import { agentAPI } from '../services/api';
 import { showToast } from '../lib/toast';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../components/ui/table";
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  data?: any[];
   timestamp: Date;
 }
 
@@ -34,10 +43,16 @@ const Chat: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Save to localStorage whenever messages change
+  const [sessionMemory, setSessionMemory] = useState<any>(() => {
+    const saved = localStorage.getItem('renew_ai_session_memory');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  // Save to repositories whenever they change
   useEffect(() => {
     localStorage.setItem('renew_ai_chat_history', JSON.stringify(messages));
-  }, [messages]);
+    localStorage.setItem('renew_ai_session_memory', JSON.stringify(sessionMemory));
+  }, [messages, sessionMemory]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -68,11 +83,22 @@ const Chat: React.FC = () => {
         content: msg.content
       }));
       
-      const response = await agentAPI.askQuestion(input, historyContext);
+      const response = await agentAPI.askQuestion(input, historyContext, sessionMemory);
+      const { answer, data, lastTopic, lastCategories, lastResultSummary, lastSql } = response.data;
+
+      // Update session memory for the next turn
+      setSessionMemory({
+        lastTopic,
+        lastCategories,
+        lastResultSummary,
+        lastSql
+      });
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: response.data.answer,
+        content: answer || "I've processed your request.",
+        data: data,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, assistantMessage]);
@@ -86,8 +112,45 @@ const Chat: React.FC = () => {
 
   const clearChat = () => {
     setMessages([]);
+    setSessionMemory({});
     localStorage.removeItem('renew_ai_chat_history');
+    localStorage.removeItem('renew_ai_session_memory');
     showToast.info('Chat Cleared', 'Conversation history has been reset.');
+  };
+
+  const DataTable: React.FC<{ data: any[] }> = ({ data }) => {
+    if (!data || data.length === 0) return null;
+    
+    const headers = Object.keys(data[0]);
+    
+    return (
+      <div className="mt-4 rounded-xl border border-border/50 overflow-hidden bg-black/20">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-white/5">
+              <TableRow>
+                {headers.map((header) => (
+                  <TableHead key={header} className="text-[10px] font-black uppercase tracking-widest text-primary py-3">
+                    {header.replace(/_/g, ' ')}
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.map((row, i) => (
+                <TableRow key={i} className="hover:bg-white/5 transition-colors border-border/30">
+                  {headers.map((header) => (
+                    <TableCell key={header} className="text-xs font-medium text-muted-foreground py-3">
+                      {row[header]?.toString() || '-'}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -185,6 +248,9 @@ const Chat: React.FC = () => {
                             : 'bg-secondary/80 border border-border/50 text-white shadow-xl'}`}
                         >
                           {message.content}
+                          {message.role === 'assistant' && message.data && (
+                            <DataTable data={message.data} />
+                          )}
                         </div>
                         <span className="text-[10px] font-bold text-muted-foreground tracking-tight opacity-50 px-1">
                           {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
