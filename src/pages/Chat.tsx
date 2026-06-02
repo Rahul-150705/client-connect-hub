@@ -18,7 +18,7 @@ interface Message {
 const Chat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>(() => {
     try {
-      const s = localStorage.getItem('renew_ai_chat_history');
+      const s = sessionStorage.getItem('renew_ai_chat_history');
       if (!s) return [];
       return JSON.parse(s).map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }));
     } catch { return []; }
@@ -29,12 +29,12 @@ const Chat: React.FC = () => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const [sessionMemory, setSessionMemory] = useState<any>(() => {
-    try { return JSON.parse(localStorage.getItem('renew_ai_session_memory') || '{}'); } catch { return {}; }
+    try { return JSON.parse(sessionStorage.getItem('renew_ai_session_memory') || '{}'); } catch { return {}; }
   });
 
   useEffect(() => {
-    localStorage.setItem('renew_ai_chat_history', JSON.stringify(messages));
-    localStorage.setItem('renew_ai_session_memory', JSON.stringify(sessionMemory));
+    sessionStorage.setItem('renew_ai_chat_history', JSON.stringify(messages));
+    sessionStorage.setItem('renew_ai_session_memory', JSON.stringify(sessionMemory));
   }, [messages, sessionMemory]);
 
   useEffect(() => {
@@ -71,8 +71,8 @@ const Chat: React.FC = () => {
 
   const clearChat = () => {
     setMessages([]); setSessionMemory({});
-    localStorage.removeItem('renew_ai_chat_history');
-    localStorage.removeItem('renew_ai_session_memory');
+    sessionStorage.removeItem('renew_ai_chat_history');
+    sessionStorage.removeItem('renew_ai_session_memory');
     showToast.info('Cleared', 'Conversation reset.');
   };
 
@@ -131,8 +131,15 @@ const Chat: React.FC = () => {
               AI Assistant
             </h1>
           </div>
-          <button onClick={clearChat}
-            className="p-2 text-[#F5F0E8]/30 hover:text-red-400 transition-colors border border-[#1e1c1f] hover:border-red-500/30">
+          <button
+            onClick={clearChat}
+            disabled={messages.length === 0}
+            className={`p-2 transition-colors border ${
+              messages.length === 0
+                ? 'text-[#F5F0E8]/15 border-[#1e1c1f]/50 cursor-not-allowed opacity-40'
+                : 'text-[#F5F0E8]/30 hover:text-red-400 border-[#1e1c1f] hover:border-red-500/30 cursor-pointer'
+            }`}
+          >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>

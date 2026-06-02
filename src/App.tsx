@@ -98,12 +98,13 @@ function AppRoutes() {
       </Routes>
       <ToastContainer
         position="bottom-right"
-        autoClose={false}
-        hideProgressBar={true}
+        autoClose={10000}
+        hideProgressBar={false}
         newestOnTop={true}
-        closeOnClick={false}
+        closeOnClick={true}
         rtl={false}
-        pauseOnFocusLoss
+        pauseOnFocusLoss={false}
+        pauseOnHover={false}
         draggable
         theme="dark"
         toastClassName="rounded-md border border-[#1e1c1f] bg-[#0a0908] text-[#F5F0E8] shadow-2xl font-medium tracking-wide text-sm p-4"

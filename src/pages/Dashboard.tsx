@@ -291,8 +291,8 @@ const Dashboard: React.FC = () => {
                 <div key={i} className="flex items-center gap-2">
                   <span className="w-2 h-2 shrink-0" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
                   <div>
-                    <p className="text-[9px] text-[#F5F0E8]/40 uppercase tracking-wider truncate" style={{ fontFamily: 'DM Mono, monospace' }}>{item.name}</p>
-                    <p className="text-sm font-black text-[#F5F0E8]" style={{ fontFamily: 'Playfair Display, serif' }}>{item.value}</p>
+                    <p className="text-[9px] text-amber-500/70 uppercase tracking-wider truncate" style={{ fontFamily: 'DM Mono, monospace' }}>{item.name}</p>
+                    <p className="text-sm font-black text-amber-400" style={{ fontFamily: 'Playfair Display, serif' }}>{item.value}</p>
                   </div>
                 </div>
               ))}

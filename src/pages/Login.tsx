@@ -79,20 +79,6 @@ const Login: React.FC = () => {
             The insurance management platform built for brokers who move fast.
           </p>
         </div>
-
-        {/* Bottom stats */}
-        <div className="relative grid grid-cols-3 gap-4 pt-8 border-t border-[#1e1c1f]">
-          {[
-            { val: '500+', label: 'Brokers' },
-            { val: '98%', label: 'Uptime' },
-            { val: '2.1M', label: 'Policies' },
-          ].map(s => (
-            <div key={s.label}>
-              <p className="text-2xl font-black text-amber-500" style={{ fontFamily: 'Playfair Display, serif' }}>{s.val}</p>
-              <p className="text-[10px] text-[#F5F0E8]/40 uppercase tracking-[0.15em] mt-0.5" style={{ fontFamily: 'DM Mono, monospace' }}>{s.label}</p>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Right panel — form */}

@@ -15,15 +15,15 @@ const ToastContent: React.FC<ToastContentProps> = ({ title, message }) => (
 
 export const showToast = {
   success: (title: string, message: string) => {
-    toast.success(<ToastContent title={title} message={message} />);
+    toast.success(<ToastContent title={title} message={message} />, { autoClose: 10000, hideProgressBar: true });
   },
   error: (title: string, message: string) => {
-    toast.error(<ToastContent title={title} message={message} />);
+    toast.error(<ToastContent title={title} message={message} />, { autoClose: 10000, hideProgressBar: true });
   },
   warning: (title: string, message: string) => {
-    toast.warning(<ToastContent title={title} message={message} />);
+    toast.warning(<ToastContent title={title} message={message} />, { autoClose: 10000, hideProgressBar: true });
   },
   info: (title: string, message: string) => {
-    toast.info(<ToastContent title={title} message={message} />);
+    toast.info(<ToastContent title={title} message={message} />, { autoClose: 5000, hideProgressBar: true });
   },
 };
