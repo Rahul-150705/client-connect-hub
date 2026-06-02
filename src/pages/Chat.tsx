@@ -1,16 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Send, User, Sparkles, Trash2, Loader2 } from 'lucide-react';
+import { Send, User, Sparkles, Trash2, Loader2, ArrowUp } from 'lucide-react';
 import Layout from '../components/Layout';
 import { agentAPI } from '../services/api';
 import { showToast } from '../lib/toast';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "../components/ui/table";
 
 interface Message {
@@ -23,125 +17,96 @@ interface Message {
 
 const Chat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>(() => {
-    // Load from localStorage on initial render
-    const saved = localStorage.getItem('renew_ai_chat_history');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Convert string timestamps back to Date objects
-        return parsed.map((msg: any) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp)
-        }));
-      } catch (e) {
-        return [];
-      }
-    }
-    return [];
+    try {
+      const s = localStorage.getItem('renew_ai_chat_history');
+      if (!s) return [];
+      return JSON.parse(s).map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }));
+    } catch { return []; }
   });
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const [sessionMemory, setSessionMemory] = useState<any>(() => {
-    const saved = localStorage.getItem('renew_ai_session_memory');
-    return saved ? JSON.parse(saved) : {};
+    try { return JSON.parse(localStorage.getItem('renew_ai_session_memory') || '{}'); } catch { return {}; }
   });
 
-  // Save to repositories whenever they change
   useEffect(() => {
     localStorage.setItem('renew_ai_chat_history', JSON.stringify(messages));
     localStorage.setItem('renew_ai_session_memory', JSON.stringify(sessionMemory));
   }, [messages, sessionMemory]);
 
-  // Auto-scroll to bottom on new messages
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages]);
 
-  const handleSend = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!input.trim() || isLoading) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input,
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || isLoading) return;
+    const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text, timestamp: new Date() };
+    setMessages(p => [...p, userMsg]);
     setInput('');
     setIsLoading(true);
-
     try {
-      // Send the last 4 messages as context
-      const historyContext = messages.slice(-4).map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
-      
-      const response = await agentAPI.askQuestion(input, historyContext, sessionMemory);
-      const { answer, data, lastTopic, lastCategories, lastResultSummary, lastSql } = response.data;
-
-      // Update session memory for the next turn
-      setSessionMemory({
-        lastTopic,
-        lastCategories,
-        lastResultSummary,
-        lastSql
-      });
-
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: answer || "I've processed your request.",
-        data: data,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error: any) {
-      console.error('Chat error:', error);
-      showToast.error('AI Assistant Error', 'Failed to get a response. Please check your connection.');
+      const history = messages.slice(-4).map(m => ({ role: m.role, content: m.content }));
+      const res = await agentAPI.askQuestion(text, history, sessionMemory);
+      const { answer, data, lastTopic, lastCategories, lastResultSummary, lastSql } = res.data;
+      setSessionMemory({ lastTopic, lastCategories, lastResultSummary, lastSql });
+      setMessages(p => [...p, {
+        id: (Date.now() + 1).toString(), role: 'assistant',
+        content: answer || 'Processed.', data, timestamp: new Date(),
+      }]);
+    } catch {
+      showToast.error('Error', 'Failed to get response.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const clearChat = () => {
-    setMessages([]);
-    setSessionMemory({});
-    localStorage.removeItem('renew_ai_chat_history');
-    localStorage.removeItem('renew_ai_session_memory');
-    showToast.info('Chat Cleared', 'Conversation history has been reset.');
+  const handleSubmit = (e?: React.FormEvent) => { e?.preventDefault(); sendMessage(input); };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
   };
 
-  const DataTable: React.FC<{ data: any[] }> = ({ data }) => {
-    if (!data || data.length === 0) return null;
-    
+  const clearChat = () => {
+    setMessages([]); setSessionMemory({});
+    localStorage.removeItem('renew_ai_chat_history');
+    localStorage.removeItem('renew_ai_session_memory');
+    showToast.info('Cleared', 'Conversation reset.');
+  };
+
+  const prompts = [
+    'Total revenue last month?',
+    'Policies expiring this week',
+    'My commission this year',
+    'Active clients count',
+  ];
+
+  const DataTable = ({ data }: { data: any[] }) => {
+    if (!data?.length) return null;
     const headers = Object.keys(data[0]);
-    
     return (
-      <div className="mt-4 rounded-xl border border-border/50 overflow-hidden bg-black/20">
+      <div className="mt-3 border border-[#1e1c1f] overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="bg-white/5">
-              <TableRow>
-                {headers.map((header) => (
-                  <TableHead key={header} className="text-[10px] font-black uppercase tracking-widest text-primary py-3">
-                    {header.replace(/_/g, ' ')}
+            <TableHeader className="bg-[#0d0c0e]">
+              <TableRow className="border-[#1e1c1f]">
+                {headers.map(h => (
+                  <TableHead key={h} className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-500 py-2 px-4"
+                    style={{ fontFamily: 'DM Mono, monospace' }}>
+                    {h.replace(/_/g, ' ')}
                   </TableHead>
                 ))}
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.map((row, i) => (
-                <TableRow key={i} className="hover:bg-white/5 transition-colors border-border/30">
-                  {headers.map((header) => (
-                    <TableCell key={header} className="text-xs font-medium text-muted-foreground py-3">
-                      {row[header]?.toString() || '-'}
+                <TableRow key={i} className="border-[#1e1c1f] hover:bg-white/[0.02]">
+                  {headers.map(h => (
+                    <TableCell key={h} className="text-xs text-[#F5F0E8]/70 py-2 px-4"
+                      style={{ fontFamily: 'DM Mono, monospace' }}>
+                      {row[h]?.toString() || '—'}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -155,122 +120,118 @@ const Chat: React.FC = () => {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto h-[calc(100vh-6rem)] flex flex-col">
-        {/* Top bar */}
-        <div className="flex items-center justify-between pb-5 border-b border-white/5">
+      <div className="max-w-3xl mx-auto h-[calc(100vh-5rem)] flex flex-col" style={{ fontFamily: 'Syne, sans-serif' }}>
+        {/* Header */}
+        <div className="flex items-center justify-between pb-5 border-b border-[#1e1c1f] mb-4">
           <div>
-            <h1 className="text-xl font-semibold text-white tracking-tight">AI Assistant</h1>
-            <p className="text-xs text-white/40 mt-0.5">Ask anything about your portfolio</p>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            </div>
+            <h1 className="text-xl font-black text-[#F5F0E8] tracking-tight" style={{ fontFamily: 'Playfair Display, serif' }}>
+              AI Assistant
+            </h1>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="hidden sm:inline-flex items-center gap-2 text-[10px] font-medium text-violet-300 bg-violet-500/10 border border-violet-500/20 rounded-full px-3 py-1">
-              <Sparkles className="w-3 h-3" /> Neural Engine
-            </span>
-            <button
-              onClick={clearChat}
-              className="p-2 rounded-lg text-white/50 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
-              title="Clear history"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
+          <button onClick={clearChat}
+            className="p-2 text-[#F5F0E8]/30 hover:text-red-400 transition-colors border border-[#1e1c1f] hover:border-red-500/30">
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         </div>
 
         {/* Messages */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto py-6 space-y-5 scrollbar-hide">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-hide space-y-6 py-2">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center px-6">
-              <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-5">
-                <Sparkles className="w-8 h-8 text-indigo-400" />
+              <div className="w-14 h-14 bg-[#0d0c0e] border border-[#1e1c1f] flex items-center justify-center mb-6">
+                <Sparkles className="w-6 h-6 text-amber-500" />
               </div>
-              <h2 className="text-lg font-semibold text-white">Ask me anything about your portfolio</h2>
-              <p className="text-sm text-white/40 mt-1 mb-8">Insights, trends, renewals — instantly.</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
-                {[
-                  'Total revenue last month?',
-                  'Policies expiring this week',
-                  'My commission this year',
-                  'Active clients count',
-                ].map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => { setInput(s); setTimeout(() => handleSend(), 0); }}
-                    className="border border-white/10 hover:border-indigo-500/40 hover:bg-indigo-500/5 rounded-xl px-4 py-3 text-sm text-left text-white/70 hover:text-white transition-all"
-                  >
-                    {s}
+              <h2 className="text-lg font-black text-[#F5F0E8] mb-2" style={{ fontFamily: 'Playfair Display, serif' }}>
+                Ask your portfolio anything
+              </h2>
+              <p className="text-sm text-[#F5F0E8]/40 mb-10 max-w-sm">
+                Revenue, renewals, clients — answered in seconds.
+              </p>
+              <div className="grid grid-cols-2 gap-2 w-full max-w-md">
+                {prompts.map(p => (
+                  <button key={p} onClick={() => sendMessage(p)}
+                    className="border border-[#1e1c1f] hover:border-amber-500/40 hover:bg-amber-500/5 px-4 py-3
+                      text-xs text-left text-[#F5F0E8]/50 hover:text-[#F5F0E8] transition-all"
+                    style={{ borderRadius: 0, fontFamily: 'DM Mono, monospace' }}>
+                    {p}
                   </button>
                 ))}
               </div>
             </div>
           ) : (
-            <AnimatePresence initial={false}>
-              {messages.map((message) => (
-                <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div className={`flex gap-2.5 max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${message.role === 'user' ? 'bg-white/10' : 'bg-indigo-500/20 text-indigo-400'}`}>
-                      {message.role === 'user' ? <User className="w-4 h-4 text-white/70" /> : <Sparkles className="w-4 h-4" />}
+            <>
+              {messages.map((msg) => (
+                <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  {msg.role === 'assistant' && (
+                    <div className="w-7 h-7 bg-amber-500 flex items-center justify-center shrink-0 mt-0.5">
+                      <Sparkles className="w-3.5 h-3.5 text-black" />
                     </div>
-                    <div className={`flex flex-col ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
-                      <div className={`text-sm leading-relaxed px-4 py-3 ${message.role === 'user'
-                        ? 'bg-indigo-600 text-white rounded-2xl rounded-br-sm'
-                        : 'bg-[#111118] border border-white/5 text-white/90 rounded-2xl rounded-bl-sm'}`}
-                      >
-                        {message.content}
-                      </div>
-                      <span className="text-[10px] text-white/30 mt-1 px-1">
-                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                  )}
+                  <div className={`max-w-[75%] ${msg.role === 'user' ? 'items-end' : 'items-start'} flex flex-col`}>
+                    <div className={`px-4 py-3 text-sm leading-relaxed ${msg.role === 'user'
+                        ? 'bg-amber-500 text-black font-medium'
+                        : 'bg-[#0d0c0e] border border-[#1e1c1f] text-[#F5F0E8]/85'
+                      }`} style={{ borderRadius: 0 }}>
+                      {msg.content}
                     </div>
+                    {msg.data && msg.data.length > 0 && <DataTable data={msg.data} />}
+                    <span className="text-[9px] text-[#F5F0E8]/20 mt-1.5 px-1" style={{ fontFamily: 'DM Mono, monospace' }}>
+                      {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
                   </div>
-                </motion.div>
+                  {msg.role === 'user' && (
+                    <div className="w-7 h-7 bg-[#1e1c1f] flex items-center justify-center shrink-0 mt-0.5">
+                      <User className="w-3.5 h-3.5 text-[#F5F0E8]/60" />
+                    </div>
+                  )}
+                </div>
               ))}
               {isLoading && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
-                  <div className="flex gap-2.5 max-w-[80%]">
-                    <div className="w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
-                      <Sparkles className="w-4 h-4" />
-                    </div>
-                    <div className="bg-[#111118] border border-white/5 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1">
-                      {[0, 150, 300].map((d) => (
-                        <span key={d} className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" style={{ animationDelay: `${d}ms` }} />
-                      ))}
-                    </div>
+                <div className="flex gap-3">
+                  <div className="w-7 h-7 bg-amber-500 flex items-center justify-center shrink-0 mt-0.5">
+                    <Sparkles className="w-3.5 h-3.5 text-black" />
                   </div>
-                </motion.div>
+                  <div className="bg-[#0d0c0e] border border-[#1e1c1f] px-4 py-3 flex items-center gap-1.5">
+                    {[0, 100, 200].map(d => (
+                      <span key={d} className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"
+                        style={{ animationDelay: `${d}ms` }} />
+                    ))}
+                  </div>
+                </div>
               )}
-            </AnimatePresence>
+            </>
           )}
         </div>
 
         {/* Input */}
-        <div className="bg-[#111118] border border-white/5 rounded-2xl p-3">
-          <form onSubmit={handleSend} className="relative">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask anything..."
-              className="bg-white/5 border border-white/10 rounded-2xl pl-5 pr-14 py-4 text-sm w-full text-white placeholder:text-white/30 focus:border-indigo-500/50 focus:outline-none transition-colors"
-            />
+        <div className="border border-[#1e1c1f] bg-[#0d0c0e] mt-4">
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask anything about your portfolio..."
+            rows={2}
+            className="w-full bg-transparent px-5 pt-4 pb-2 text-sm text-[#F5F0E8] placeholder:text-[#F5F0E8]/20
+              focus:outline-none resize-none"
+            style={{ fontFamily: 'DM Mono, monospace' }}
+          />
+          <div className="flex items-center justify-between px-5 pb-3">
+            <span className="text-[9px] text-[#F5F0E8]/20 uppercase tracking-[0.2em]" style={{ fontFamily: 'DM Mono, monospace' }}>
+              ⏎ Send · Shift+⏎ New line
+            </span>
             <button
-              type="submit"
+              onClick={handleSubmit}
               disabled={!input.trim() || isLoading}
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-indigo-600 hover:bg-indigo-500 rounded-xl p-2.5 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              className="w-8 h-8 bg-amber-500 hover:bg-amber-400 disabled:opacity-30 disabled:cursor-not-allowed
+                flex items-center justify-center transition-colors"
+              style={{ borderRadius: 0 }}
             >
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              {isLoading ? <Loader2 className="w-3.5 h-3.5 text-black animate-spin" /> : <ArrowUp className="w-3.5 h-3.5 text-black" />}
             </button>
-          </form>
-          <div className="flex items-center justify-between px-2 pt-3">
-            <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-[10px] text-white/40 uppercase tracking-wider">System Ready</span>
-            </div>
-            <span className="text-[10px] text-violet-300/60 uppercase tracking-[0.2em]">Renew Intelligence</span>
           </div>
         </div>
       </div>

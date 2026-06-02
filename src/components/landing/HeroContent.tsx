@@ -1,19 +1,19 @@
 import { Play, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface HeroContentProps {
   opacity: number;
 }
 
 const HeroContent = ({ opacity }: HeroContentProps) => {
+  const navigate = useNavigate();
+
   return (
     <div
-      className="relative z-10 max-w-3xl px-6 md:px-12 lg:px-20 transition-opacity duration-150"
+      className="relative z-20 max-w-3xl px-6 md:px-12 lg:px-20 pb-24 md:pb-40 lg:pb-48 transition-opacity duration-150"
       style={{ opacity }}
     >
-      <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium text-white/80 backdrop-blur-md mb-6">
-        <span className="h-1.5 w-1.5 rounded-full bg-orange-400 animate-pulse" />
-        New: AI-powered policy insights are live
-      </div>
+
       <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-white leading-[1.05]">
         Insurance management,
         <br />
@@ -26,7 +26,10 @@ const HeroContent = ({ opacity }: HeroContentProps) => {
         that demand speed, clarity and zero friction.
       </p>
       <div className="mt-10 flex flex-wrap items-center gap-4">
-        <button className="group inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur-md transition-all hover:bg-white/20 hover:border-white/40">
+        <button 
+          onClick={() => navigate('/signup')}
+          className="group inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur-md transition-all hover:bg-white/20 hover:border-white/40"
+        >
           Start Free Trial
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
         </button>

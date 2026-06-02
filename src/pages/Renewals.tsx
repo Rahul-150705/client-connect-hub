@@ -8,6 +8,7 @@ import { policyAPI } from '../services/api';
 import Layout from '../components/Layout';
 import { format, isSameDay } from 'date-fns';
 import { motion } from 'framer-motion';
+import { SingleDatePicker } from '@/components/ui/date-range-picker';
 
 const Renewals: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,12 +69,10 @@ const Renewals: React.FC = () => {
 
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input 
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="bg-secondary border border-border rounded-lg pl-10 pr-4 py-2 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-primary"
+              <SingleDatePicker 
+                date={selectedDate} 
+                onChange={(date) => setSelectedDate(date)} 
+                label="" 
               />
             </div>
           </div>

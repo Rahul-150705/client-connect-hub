@@ -4,7 +4,7 @@ import HeroBackground from '@/components/landing/HeroBackground';
 import HeroContent from '@/components/landing/HeroContent';
 import ScreenshotSection from '@/components/landing/ScreenshotSection';
 import Features from '@/components/landing/Features';
-import LimelightNav from '@/components/landing/LimelightNav';
+
 
 const Landing = () => {
   const [heroOpacity, setHeroOpacity] = useState(1);
@@ -49,11 +49,7 @@ const Landing = () => {
       {/* Features */}
       <Features />
 
-      {/* Limelight nav demo */}
-      <section className="relative z-10 pb-24 flex flex-col items-center gap-6">
-        <p className="text-xs uppercase tracking-[0.2em] text-white/40">Try the navigation</p>
-        <LimelightNav />
-      </section>
+
 
       <footer className="border-t border-white/5 py-10 text-center text-xs text-white/40">
         © {new Date().getFullYear()} Renew AI. Crafted with care.

@@ -55,11 +55,11 @@ const Navbar = () => {
       }`}
     >
       <div className="mx-auto max-w-7xl px-6 lg:px-10 h-16 flex items-center justify-between">
-        <a href="#" className="flex items-center gap-2 text-white font-bold text-lg">
+        <a href="/" className="flex items-center gap-2 text-white font-bold text-lg mb-2 md:mb-0">
           <span className="h-7 w-7 rounded-md bg-gradient-to-br from-orange-400 to-amber-500 grid place-items-center text-black font-black">
-            I
+            R
           </span>
-          Insurly
+          Renew AI
         </a>
 
         <div
