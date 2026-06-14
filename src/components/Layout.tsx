@@ -20,8 +20,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-[#09080A] text-[#F5F0E8] flex flex-col relative pb-28">
 
-      {/* Floating logo — top left */}
-      <div className="fixed top-5 left-5 z-50 flex items-center gap-2 pointer-events-none">
+      {/* Floating logo — top left (clickable → dashboard) */}
+      <div
+        className="fixed top-5 left-5 z-50 flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+        onClick={() => navigate('/dashboard')}
+        title="Go to Dashboard"
+      >
         <div className="w-6 h-6 flex items-center justify-center bg-white rounded-md p-0.5 shadow-md">
           <img src="/logo.png" alt="Renew AI Logo" className="w-full h-full object-contain" />
         </div>
