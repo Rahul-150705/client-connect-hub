@@ -14,7 +14,7 @@ import {
 } from 'recharts';
 import { useAuth } from '../context/AuthContext';
 
-const DONUT_COLORS = ['#F5A623', '#E8954A', '#D4804F', '#B86940', '#8C5030', '#5C3320'];
+const DONUT_COLORS = ['#F5A623', '#F7BC55', '#E8954A', '#F0C070', '#D4804F', '#FAD080'];
 
 const TOOLTIP_STYLE = {
   backgroundColor: '#0d0c0e',
