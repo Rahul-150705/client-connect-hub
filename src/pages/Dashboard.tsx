@@ -26,6 +26,22 @@ const TOOLTIP_STYLE = {
   padding: '8px 12px',
 };
 
+const TOOLTIP_ITEM_STYLE = {
+  color: '#F5F0E8',
+  fontFamily: 'DM Mono, monospace',
+  fontSize: '11px',
+};
+
+const TOOLTIP_LABEL_STYLE = {
+  color: '#F5A623',
+  fontFamily: 'DM Mono, monospace',
+  fontSize: '10px',
+  fontWeight: 'bold',
+  textTransform: 'uppercase' as const,
+  letterSpacing: '0.1em',
+  marginBottom: '4px',
+};
+
 const Dashboard: React.FC = () => {
   const [period, setPeriod] = useState(30);
   const navigate = useNavigate();
@@ -286,7 +302,12 @@ const Dashboard: React.FC = () => {
                   <Pie data={donutData} innerRadius={52} outerRadius={72} paddingAngle={3} dataKey="value" stroke="none">
                     {donutData.map((_: any, i: number) => <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />)}
                   </Pie>
-                  <Tooltip contentStyle={TOOLTIP_STYLE} />
+                  <Tooltip
+                    contentStyle={TOOLTIP_STYLE}
+                    itemStyle={TOOLTIP_ITEM_STYLE}
+                    labelStyle={TOOLTIP_LABEL_STYLE}
+                    formatter={(value: any, name: any) => [value, name]}
+                  />
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
