@@ -40,6 +40,7 @@ const Dashboard: React.FC = () => {
   const revenueTrendsQuery = useQuery({ queryKey: ['revenueTrends'], queryFn: () => dashboardAPI.getRevenueTrends().then(r => r.data) });
 
   const loading = policiesQuery.isLoading || summaryQuery.isLoading;
+  const isFetching = policiesQuery.isFetching || summaryQuery.isFetching || distributionQuery.isFetching;
 
   const policies = policiesQuery.data || [];
   const messageLogs = messageLogsQuery.data || [];
@@ -81,7 +82,8 @@ const Dashboard: React.FC = () => {
   const containerV: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.04 } } };
   const itemV: Variants = { hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0, transition: { duration: 0.35 } } };
 
-  if (loading) return (
+  // Only show full-page spinner on very first load (no cached data at all)
+  if (loading && !policies.length && !summary) return (
     <Layout>
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="spinner" />
@@ -105,6 +107,12 @@ const Dashboard: React.FC = () => {
 
   return (
     <Layout>
+      {/* Thin top bar shows on background refetch — not a full page block */}
+      {isFetching && (
+        <div className="fixed top-0 left-0 right-0 z-50 h-0.5 bg-amber-500/20">
+          <div className="h-full bg-amber-500 animate-pulse" style={{ width: '60%' }} />
+        </div>
+      )}
       <motion.div variants={containerV} initial="hidden" animate="visible"
         className="space-y-8 max-w-[1600px]" style={{ fontFamily: 'Syne, sans-serif' }}>
 
