@@ -53,7 +53,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </main>
 
       {/* Floating Center Bottom Navigation */}
-      <BottomNavBar stickyBottom className="z-[9999]" />
+      <BottomNavBar stickyBottom className="z-40" />
     </div>
   );
 };

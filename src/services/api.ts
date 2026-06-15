@@ -106,16 +106,16 @@ export const policyAPI = {
   //   });
   // },
   
-  // extractFromPdf: (file: File) => {
-  //   const formData = new FormData();
-  //   formData.append('file', file);
-  //   
-  //   return api.post('/policies/extract-from-pdf', formData, {
-  //     headers: {
-  //       'Content-Type': 'multipart/form-data',
-  //     },
-  //   });
-  // },
+  extractFromPdf: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    return api.post('/policies/extract-from-pdf', formData, {
+      headers: {
+        'Content-Type': undefined,
+      },
+    });
+  },
 };
 
 // Client API

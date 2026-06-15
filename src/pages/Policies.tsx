@@ -8,7 +8,7 @@ import { format } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import Layout from '../components/Layout';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileText, Plus, X } from 'lucide-react';
+import { FileText, Plus, X, UploadCloud, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 
@@ -66,6 +66,7 @@ const Policies: React.FC = () => {
   const [advancedFilters, setAdvancedFilters] = useState({ policyType: '', minPremium: '', maxPremium: '', expiryDateFrom: '', expiryDateTo: '' });
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [policyToConfirm, setPolicyToConfirm] = useState<Policy | null>(null);
+  const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null);
   const [confirmFormData, setConfirmFormData] = useState({
     newStartDate: format(new Date(), 'yyyy-MM-dd'),
     newExpiryDate: format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), 'yyyy-MM-dd'),
@@ -76,6 +77,67 @@ const Policies: React.FC = () => {
     policyNumber: '', policyType: 'VEHICLE', vehicleType: 'Car', registrationNumber: '', insurerName: '',
     startDate: '', expiryDate: '', premium: '', premiumFrequency: 'YEARLY', policyDescription: '',
   });
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [extractionError, setExtractionError] = useState('');
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
+      showToast.error('Invalid file', 'Please upload a PDF document.');
+      return;
+    }
+    
+    setIsExtracting(true);
+    setExtractionError('');
+    try {
+      const response = await policyAPI.extractFromPdf(file);
+      const data = response.data;
+      if (data.success) {
+        showToast.success('Extracted', 'Form filled automatically from PDF.');
+        let extractedPhone = data.clientPhoneNumber || prev.clientPhoneNumber;
+        if (extractedPhone) {
+          extractedPhone = extractedPhone.replace(/\D/g, ''); // strip all non-digits
+          if (extractedPhone.startsWith('91') && extractedPhone.length > 10) {
+            extractedPhone = '+91' + extractedPhone.substring(2);
+          } else {
+            extractedPhone = '+91' + extractedPhone;
+          }
+        }
+        
+        setFormData(prev => ({
+          ...prev,
+          clientFullName: data.clientFullName || prev.clientFullName,
+          clientEmail: data.clientEmail || prev.clientEmail,
+          clientPhoneNumber: extractedPhone,
+          clientWhatsappNumber: extractedPhone,
+          clientAddress: data.clientAddress || prev.clientAddress,
+          policyNumber: data.policyNumber || prev.policyNumber,
+          policyType: data.policyType || prev.policyType,
+          vehicleType: data.vehicleType || prev.vehicleType,
+          registrationNumber: data.registrationNumber || prev.registrationNumber,
+          insurerName: data.insurerName || prev.insurerName,
+          startDate: data.startDate || prev.startDate,
+          expiryDate: data.expiryDate || prev.expiryDate,
+          premium: data.premium || prev.premium,
+          premiumFrequency: data.premiumFrequency || prev.premiumFrequency,
+          policyDescription: data.policyDescription || prev.policyDescription,
+        }));
+      } else {
+        const errorMsg = data.message || 'Could not extract data.';
+        showToast.error('Extraction Failed', errorMsg);
+        setExtractionError(errorMsg);
+      }
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Failed to process PDF.';
+      showToast.error('Error', errorMsg);
+      setExtractionError(errorMsg);
+    } finally {
+      setIsExtracting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const policiesQuery = useQuery({
     queryKey: ['policies'],
@@ -112,6 +174,18 @@ const Policies: React.FC = () => {
   }, [searchParams]);
 
   useEffect(() => { setCurrentPage(1); }, [filter, searchQuery, advancedFilters]);
+
+  // Freeze background scrolling when any modal is open
+  useEffect(() => {
+    if (showModal || showDeleteModal || showConfirmModal || selectedPolicy !== null) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showModal, showDeleteModal, showConfirmModal]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -274,7 +348,7 @@ const Policies: React.FC = () => {
                   {paginatedPolicies.map((policy: Policy, idx: number) => {
                     const daysLeft = getDaysUntilExpiry(policy.expiryDate);
                     return (
-                      <tr key={policy.policyId} className="border-b border-[#1e1c1f]/50 hover:bg-white/[0.015] transition-colors">
+                      <tr key={policy.policyId} onClick={() => setSelectedPolicy(policy)} className="border-b border-[#1e1c1f]/50 hover:bg-white/[0.015] transition-colors cursor-pointer">
                         <td className="px-5 py-4 text-[9px] text-[#F5F0E8]/20 tabular-nums" style={{ fontFamily: 'DM Mono, monospace' }}>
                           {String((currentPage - 1) * pageSize + idx + 1).padStart(2, '0')}
                         </td>
@@ -321,11 +395,11 @@ const Policies: React.FC = () => {
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-1">
-                            <button onClick={() => { setPolicyToConfirm(policy); setConfirmFormData({ newStartDate: format(new Date(), 'yyyy-MM-dd'), newExpiryDate: format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), 'yyyy-MM-dd'), newPremium: policy.premium.toString(), notes: `Renewed ${policy.policyNumber}` }); setShowConfirmModal(true); }}
+                            <button onClick={(e) => { e.stopPropagation(); setPolicyToConfirm(policy); setConfirmFormData({ newStartDate: format(new Date(), 'yyyy-MM-dd'), newExpiryDate: format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), 'yyyy-MM-dd'), newPremium: policy.premium.toString(), notes: `Renewed ${policy.policyNumber}` }); setShowConfirmModal(true); }}
                               className="p-1.5 border border-[#1e1c1f] text-[#F5F0E8]/30 hover:text-emerald-400 hover:border-emerald-500/30 transition-all" title="Renew">
                               <FaCheckCircle className="text-xs" />
                             </button>
-                            <button onClick={() => { setPolicyToDelete(policy); setShowDeleteModal(true); }}
+                            <button onClick={(e) => { e.stopPropagation(); setPolicyToDelete(policy); setShowDeleteModal(true); }}
                               className="p-1.5 border border-[#1e1c1f] text-[#F5F0E8]/30 hover:text-red-400 hover:border-red-500/30 transition-all" title="Delete">
                               <FaTrash className="text-xs" />
                             </button>
@@ -367,7 +441,7 @@ const Policies: React.FC = () => {
         <AnimatePresence>
           {showDeleteModal && policyToDelete && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+              className="fixed inset-0 z-[50] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
               onClick={() => { setShowDeleteModal(false); setPolicyToDelete(null); }}>
               <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
                 className="w-full max-w-sm bg-[#0d0c0e] border border-[#1e1c1f] p-6"
@@ -401,7 +475,7 @@ const Policies: React.FC = () => {
         <AnimatePresence>
           {showConfirmModal && policyToConfirm && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+              className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
               onClick={() => setShowConfirmModal(false)}>
               <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
                 className="w-full max-w-md bg-[#0d0c0e] border border-[#1e1c1f] p-6 max-h-[90vh] overflow-y-auto"
@@ -450,7 +524,7 @@ const Policies: React.FC = () => {
         <AnimatePresence>
           {showModal && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+              className="fixed inset-0 z-[50] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-4"
               onClick={handleCloseModal}>
               <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
                 className="w-full max-w-2xl bg-[#0d0c0e] border border-[#1e1c1f] max-h-[92vh] overflow-y-auto scrollbar-hide"
@@ -459,12 +533,48 @@ const Policies: React.FC = () => {
                   <h2 className="text-base font-black text-[#F5F0E8] uppercase tracking-wider" style={{ fontFamily: 'Syne, sans-serif' }}>Add New Policy</h2>
                   <button onClick={handleCloseModal} className="text-[#F5F0E8]/30 hover:text-[#F5F0E8] transition-colors"><X className="w-4 h-4" /></button>
                 </div>
+                <div className="px-6 pt-5 pb-0">
+                  <div className={`border p-4 flex flex-col gap-3 transition-colors ${extractionError ? 'bg-red-500/10 border-red-500/30' : 'bg-amber-500/10 border-amber-500/20'}`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className={`text-sm font-bold flex items-center gap-2 ${extractionError ? 'text-red-400' : 'text-[#F5F0E8]'}`}>
+                          <span className={extractionError ? 'text-red-500' : 'text-amber-500'}>⚡</span> AI PDF Extraction
+                        </p>
+                        <p className="text-[10px] text-[#F5F0E8]/50 mt-1" style={{ fontFamily: 'DM Mono, monospace' }}>
+                          Upload a physical PDF to automatically fill this form.
+                        </p>
+                      </div>
+                      <input 
+                        type="file" 
+                        accept=".pdf" 
+                        ref={fileInputRef} 
+                        className="hidden" 
+                        onChange={handlePdfUpload} 
+                      />
+                      <button 
+                        type="button" 
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isExtracting}
+                        className={`px-4 py-2 text-[10px] font-black uppercase tracking-[0.1em] transition-all disabled:opacity-50 flex items-center gap-2 ${extractionError ? 'bg-red-500 hover:bg-red-400 text-white border-0' : 'bg-amber-500 hover:bg-amber-400 text-black border-0'}`}
+                        style={{ borderRadius: 0, fontFamily: 'DM Mono, monospace' }}
+                      >
+                        {isExtracting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UploadCloud className="w-3.5 h-3.5" />}
+                        {isExtracting ? 'Extracting...' : 'Upload PDF'}
+                      </button>
+                    </div>
+                    {extractionError && (
+                      <p className="text-[10px] font-bold text-red-500 tracking-wide mt-1" style={{ fontFamily: 'DM Mono, monospace' }}>
+                        Error: {extractionError}
+                      </p>
+                    )}
+                  </div>
+                </div>
                 <form onSubmit={handleSubmit} className="p-6 space-y-6">
                   <div>
                     <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-amber-500 mb-4" style={{ fontFamily: 'DM Mono, monospace' }}>Client Information</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <ModalInput label="Full Name *" name="clientFullName" required placeholder="Jane Doe" value={formData.clientFullName} onChange={handleInputChange} />
-                      <ModalInput label="Email *" name="clientEmail" type="email" required placeholder="jane@example.com" value={formData.clientEmail} onChange={handleInputChange} />
+                      <ModalInput label="Email" name="clientEmail" type="email" placeholder="jane@example.com" value={formData.clientEmail} onChange={handleInputChange} />
                       <ModalInput label="Phone (SMS) *" name="clientPhoneNumber" type="tel" required placeholder="+919876543210" value={formData.clientPhoneNumber} onChange={handleInputChange} />
                       <ModalInput label="WhatsApp" name="clientWhatsappNumber" type="tel" placeholder="+919876543210" value={formData.clientWhatsappNumber} onChange={handleInputChange} />
                       <ModalInput label="Address" name="clientAddress" placeholder="Full address" value={formData.clientAddress} onChange={handleInputChange} />
@@ -507,6 +617,91 @@ const Policies: React.FC = () => {
                     </button>
                   </div>
                 </form>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* View Policy Modal */}
+        <AnimatePresence>
+          {selectedPolicy && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[50] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+              onClick={() => setSelectedPolicy(null)}>
+              <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                className="w-full max-w-lg bg-[#0d0c0e] border border-[#1e1c1f] p-6 max-h-[90vh] overflow-y-auto"
+                style={{ borderRadius: 0 }} onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-xl font-black text-[#F5F0E8] uppercase tracking-wider" style={{ fontFamily: 'Syne, sans-serif' }}>Policy Details</h2>
+                    <p className="text-[10px] text-amber-500 font-bold tracking-wider mt-1" style={{ fontFamily: 'DM Mono, monospace' }}>{selectedPolicy.policyNumber}</p>
+                  </div>
+                  <button onClick={() => setSelectedPolicy(null)} className="text-[#F5F0E8]/30 hover:text-[#F5F0E8]"><X className="w-4 h-4" /></button>
+                </div>
+                
+                <div className="space-y-6">
+                  <div>
+                    <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-[#F5F0E8]/40 mb-3" style={{ fontFamily: 'DM Mono, monospace' }}>Client Information</p>
+                    <div className="grid grid-cols-2 gap-4 bg-[#111018] border border-[#1e1c1f] p-4 text-xs" style={{ fontFamily: 'DM Mono, monospace' }}>
+                      <div>
+                        <p className="text-[#F5F0E8]/40 mb-1">Name</p>
+                        <p className="text-[#F5F0E8] font-bold">{selectedPolicy.clientFullName}</p>
+                      </div>
+                      <div>
+                        <p className="text-[#F5F0E8]/40 mb-1">Email</p>
+                        <p className="text-[#F5F0E8]">{selectedPolicy.clientEmail || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[#F5F0E8]/40 mb-1">Phone</p>
+                        <p className="text-[#F5F0E8]">{selectedPolicy.clientPhoneNumber}</p>
+                      </div>
+                      <div>
+                        <p className="text-[#F5F0E8]/40 mb-1">WhatsApp</p>
+                        <p className="text-[#F5F0E8]">{selectedPolicy.clientWhatsappNumber || 'N/A'}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-[#F5F0E8]/40 mb-1">Address</p>
+                        <p className="text-[#F5F0E8] whitespace-pre-wrap">{selectedPolicy.clientAddress || 'N/A'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-[#F5F0E8]/40 mb-3" style={{ fontFamily: 'DM Mono, monospace' }}>Policy Information</p>
+                    <div className="grid grid-cols-2 gap-4 bg-[#111018] border border-[#1e1c1f] p-4 text-xs" style={{ fontFamily: 'DM Mono, monospace' }}>
+                      <div>
+                        <p className="text-[#F5F0E8]/40 mb-1">Type</p>
+                        <p className="text-[#F5F0E8] font-bold">{selectedPolicy.policyType}</p>
+                      </div>
+                      <div>
+                        <p className="text-[#F5F0E8]/40 mb-1">Status</p>
+                        <p className={`font-bold ${statusColor(selectedPolicy.policyStatus)}`}>{selectedPolicy.policyStatus}</p>
+                      </div>
+                      <div>
+                        <p className="text-[#F5F0E8]/40 mb-1">Start Date</p>
+                        <p className="text-[#F5F0E8]">{format(new Date(selectedPolicy.startDate), 'dd MMM yyyy')}</p>
+                      </div>
+                      <div>
+                        <p className="text-[#F5F0E8]/40 mb-1">Expiry Date</p>
+                        <p className="text-[#F5F0E8]">{format(new Date(selectedPolicy.expiryDate), 'dd MMM yyyy')}</p>
+                      </div>
+                      <div>
+                        <p className="text-[#F5F0E8]/40 mb-1">Premium</p>
+                        <p className="text-[#F5F0E8] font-bold">₹{selectedPolicy.premium.toLocaleString()} <span className="text-[#F5F0E8]/40">/{selectedPolicy.premiumFrequency}</span></p>
+                      </div>
+                      <div>
+                        <p className="text-[#F5F0E8]/40 mb-1">Renewal Status</p>
+                        <p className="text-amber-500">{selectedPolicy.renewalStatus.replace('_', ' ')}</p>
+                      </div>
+                      {selectedPolicy.policyDescription && (
+                        <div className="col-span-2">
+                          <p className="text-[#F5F0E8]/40 mb-1">Description</p>
+                          <p className="text-[#F5F0E8] whitespace-pre-wrap">{selectedPolicy.policyDescription}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </motion.div>
             </motion.div>
           )}
