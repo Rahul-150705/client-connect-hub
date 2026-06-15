@@ -75,7 +75,7 @@ const MessageLogs: React.FC = () => {
     },
     onError: (error: any) => {
       const errorMsg = error.response?.data?.error || 'Failed to retry message';
-      toast.error(errorMsg);
+      showToast.error('Retry Failed', errorMsg);
     },
     onSettled: () => setRetryingId(null)
   });

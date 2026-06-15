@@ -99,13 +99,13 @@ function AppRoutes() {
       <ToastContainer
         position="bottom-right"
         autoClose={10000}
-        hideProgressBar={false}
+        hideProgressBar={true}
         newestOnTop={true}
         closeOnClick={true}
         rtl={false}
         pauseOnFocusLoss={false}
         pauseOnHover={false}
-        draggable
+        draggable={false}
         theme="dark"
         toastClassName="rounded-md border border-[#1e1c1f] bg-[#0a0908] text-[#F5F0E8] shadow-2xl font-medium tracking-wide text-sm p-4"
       />

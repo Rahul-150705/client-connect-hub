@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, User, Sparkles, Trash2, Loader2, ArrowUp } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Send, User, Sparkles, Trash2, Loader2, ArrowUp, ArrowDown } from 'lucide-react';
 import Layout from '../components/Layout';
 import { agentAPI } from '../services/api';
 import { showToast } from '../lib/toast';
@@ -25,6 +26,7 @@ const Chat: React.FC = () => {
   });
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -37,9 +39,26 @@ const Chat: React.FC = () => {
     sessionStorage.setItem('renew_ai_session_memory', JSON.stringify(sessionMemory));
   }, [messages, sessionMemory]);
 
+  const scrollToBottom = (smooth = true) => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto'
+      });
+    }
+  };
+
+  const handleScroll = () => {
+    if (scrollRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
+      setShowScrollButton(!isNearBottom);
+    }
+  };
+
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages]);
+    scrollToBottom();
+  }, [messages, isLoading]);
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
@@ -145,72 +164,132 @@ const Chat: React.FC = () => {
         </div>
 
         {/* Messages */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-hide space-y-6 py-2">
-          {messages.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center px-6">
-              <div className="w-14 h-14 bg-[#0d0c0e] border border-[#1e1c1f] flex items-center justify-center mb-6">
-                <Sparkles className="w-6 h-6 text-amber-500" />
+        <div className="relative flex-1 flex flex-col min-h-0">
+          <div 
+            ref={scrollRef} 
+            onScroll={handleScroll}
+            className="flex-1 overflow-y-auto chat-scrollbar space-y-6 py-2 pr-2"
+          >
+            {messages.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center px-6">
+                <div className="w-14 h-14 bg-[#0d0c0e] border border-[#1e1c1f] flex items-center justify-center mb-6">
+                  <Sparkles className="w-6 h-6 text-amber-500" />
+                </div>
+                <h2 className="text-lg font-black text-[#F5F0E8] mb-2" style={{ fontFamily: 'Playfair Display, serif' }}>
+                  Ask your portfolio anything
+                </h2>
+                <p className="text-sm text-[#F5F0E8]/40 mb-10 max-w-sm">
+                  Revenue, renewals, clients — answered in seconds.
+                </p>
+                <div className="grid grid-cols-2 gap-2 w-full max-w-md">
+                  {prompts.map(p => (
+                    <button key={p} onClick={() => sendMessage(p)}
+                      className="border border-[#1e1c1f] hover:border-amber-500/40 hover:bg-amber-500/5 px-4 py-3
+                        text-xs text-left text-[#F5F0E8]/50 hover:text-[#F5F0E8] transition-all"
+                      style={{ borderRadius: 0, fontFamily: 'DM Mono, monospace' }}>
+                      {p}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <h2 className="text-lg font-black text-[#F5F0E8] mb-2" style={{ fontFamily: 'Playfair Display, serif' }}>
-                Ask your portfolio anything
-              </h2>
-              <p className="text-sm text-[#F5F0E8]/40 mb-10 max-w-sm">
-                Revenue, renewals, clients — answered in seconds.
-              </p>
-              <div className="grid grid-cols-2 gap-2 w-full max-w-md">
-                {prompts.map(p => (
-                  <button key={p} onClick={() => sendMessage(p)}
-                    className="border border-[#1e1c1f] hover:border-amber-500/40 hover:bg-amber-500/5 px-4 py-3
-                      text-xs text-left text-[#F5F0E8]/50 hover:text-[#F5F0E8] transition-all"
-                    style={{ borderRadius: 0, fontFamily: 'DM Mono, monospace' }}>
-                    {p}
-                  </button>
+            ) : (
+              <>
+                {messages.map((msg) => (
+                  <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+                    {msg.role === 'assistant' && (
+                      <div className="w-7 h-7 bg-amber-500 flex items-center justify-center shrink-0 mt-0.5">
+                        <Sparkles className="w-3.5 h-3.5 text-black" />
+                      </div>
+                    )}
+                    <div className={`max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'} flex flex-col`}>
+                      <div className={`px-4 py-3 text-sm leading-relaxed ${msg.role === 'user'
+                          ? 'bg-amber-500 text-black font-medium'
+                          : 'bg-[#0d0c0e] border border-[#1e1c1f] text-[#F5F0E8]/85'
+                        }`} style={{ borderRadius: 0 }}>
+                        {(() => {
+                          if (msg.role === 'user') return msg.content;
+                          try {
+                            const structured = JSON.parse(msg.content);
+                            if (structured.summary || structured.insights) {
+                              return (
+                                <div className="space-y-4 py-1">
+                                  {structured.header && (
+                                    <h3 className="text-amber-500 font-black text-[10px] uppercase tracking-[0.3em] mb-2">
+                                      {structured.header}
+                                    </h3>
+                                  )}
+                                  <p className="text-[#F5F0E8] font-medium leading-relaxed">
+                                    {structured.summary}
+                                  </p>
+                                  {structured.insights && structured.insights.length > 0 && (
+                                    <div className="space-y-2 border-l-2 border-amber-500/20 pl-4 py-1">
+                                      {structured.insights.map((ins: string, idx: number) => (
+                                        <div key={idx} className="flex gap-2 text-xs text-[#F5F0E8]/60">
+                                          <span className="text-amber-500 mt-1">•</span>
+                                          <span>{ins}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {structured.recommendation && (
+                                    <div className="bg-amber-500/5 border border-amber-500/10 p-3 mt-4 text-xs italic text-amber-200/70">
+                                      {structured.recommendation}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
+                            return msg.content;
+                          } catch {
+                            return msg.content;
+                          }
+                        })()}
+                      </div>
+                      {msg.data && msg.data.length > 0 && <DataTable data={msg.data} />}
+                      <span className="text-[9px] text-[#F5F0E8]/20 mt-1.5 px-1" style={{ fontFamily: 'DM Mono, monospace' }}>
+                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    {msg.role === 'user' && (
+                      <div className="w-7 h-7 bg-[#1e1c1f] flex items-center justify-center shrink-0 mt-0.5">
+                        <User className="w-3.5 h-3.5 text-[#F5F0E8]/60" />
+                      </div>
+                    )}
+                  </div>
                 ))}
-              </div>
-            </div>
-          ) : (
-            <>
-              {messages.map((msg) => (
-                <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  {msg.role === 'assistant' && (
+                {isLoading && (
+                  <div className="flex gap-3">
                     <div className="w-7 h-7 bg-amber-500 flex items-center justify-center shrink-0 mt-0.5">
                       <Sparkles className="w-3.5 h-3.5 text-black" />
                     </div>
-                  )}
-                  <div className={`max-w-[75%] ${msg.role === 'user' ? 'items-end' : 'items-start'} flex flex-col`}>
-                    <div className={`px-4 py-3 text-sm leading-relaxed ${msg.role === 'user'
-                        ? 'bg-amber-500 text-black font-medium'
-                        : 'bg-[#0d0c0e] border border-[#1e1c1f] text-[#F5F0E8]/85'
-                      }`} style={{ borderRadius: 0 }}>
-                      {msg.content}
+                    <div className="bg-[#0d0c0e] border border-[#1e1c1f] px-5 py-4 flex items-center gap-1.5">
+                      <div className="flex gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500/80 animate-bounce [animation-duration:0.6s] [animation-delay:-0.3s]" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500/80 animate-bounce [animation-duration:0.6s] [animation-delay:-0.15s]" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500/80 animate-bounce [animation-duration:0.6s]" />
+                      </div>
                     </div>
-                    {msg.data && msg.data.length > 0 && <DataTable data={msg.data} />}
-                    <span className="text-[9px] text-[#F5F0E8]/20 mt-1.5 px-1" style={{ fontFamily: 'DM Mono, monospace' }}>
-                      {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
                   </div>
-                  {msg.role === 'user' && (
-                    <div className="w-7 h-7 bg-[#1e1c1f] flex items-center justify-center shrink-0 mt-0.5">
-                      <User className="w-3.5 h-3.5 text-[#F5F0E8]/60" />
-                    </div>
-                  )}
-                </div>
-              ))}
-              {isLoading && (
-                <div className="flex gap-3">
-                  <div className="w-7 h-7 bg-amber-500 flex items-center justify-center shrink-0 mt-0.5">
-                    <Sparkles className="w-3.5 h-3.5 text-black" />
-                  </div>
-                  <div className="bg-[#0d0c0e] border border-[#1e1c1f] px-4 py-3 flex items-center gap-1.5">
-                    {[0, 100, 200].map(d => (
-                      <span key={d} className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"
-                        style={{ animationDelay: `${d}ms` }} />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
+                )}
+              </>
+            )}
+          </div>
+
+          <AnimatePresence>
+            {showScrollButton && (
+              <motion.button
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                onClick={() => scrollToBottom()}
+                className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-amber-500 text-black px-4 py-2 text-[9px] font-black uppercase tracking-[0.2em] flex items-center gap-2 shadow-2xl z-20 border border-black/10 hover:bg-amber-400 transition-colors"
+                style={{ borderRadius: 0, fontFamily: 'DM Mono, monospace' }}
+              >
+                <ArrowDown className="w-3 h-3" />
+                Latest Insights
+              </motion.button>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Input */}

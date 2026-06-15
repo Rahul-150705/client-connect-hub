@@ -15,15 +15,35 @@ const ToastContent: React.FC<ToastContentProps> = ({ title, message }) => (
 
 export const showToast = {
   success: (title: string, message: string) => {
-    toast.success(<ToastContent title={title} message={message} />, { autoClose: 10000, hideProgressBar: true });
+    toast.success(<ToastContent title={title} message={message} />, { 
+      autoClose: 10000, 
+      hideProgressBar: true,
+      pauseOnHover: false,
+      pauseOnFocusLoss: false 
+    });
   },
   error: (title: string, message: string) => {
-    toast.error(<ToastContent title={title} message={message} />, { autoClose: 10000, hideProgressBar: true });
+    toast.error(<ToastContent title={title} message={message} />, { 
+      autoClose: 10000, 
+      hideProgressBar: true,
+      pauseOnHover: false,
+      pauseOnFocusLoss: false 
+    });
   },
   warning: (title: string, message: string) => {
-    toast.warning(<ToastContent title={title} message={message} />, { autoClose: 10000, hideProgressBar: true });
+    toast.warning(<ToastContent title={title} message={message} />, { 
+      autoClose: 10000, 
+      hideProgressBar: true,
+      pauseOnHover: false,
+      pauseOnFocusLoss: false 
+    });
   },
   info: (title: string, message: string) => {
-    toast.info(<ToastContent title={title} message={message} />, { autoClose: 5000, hideProgressBar: true });
+    toast.info(<ToastContent title={title} message={message} />, { 
+      autoClose: 10000, 
+      hideProgressBar: true,
+      pauseOnHover: false,
+      pauseOnFocusLoss: false 
+    });
   },
 };

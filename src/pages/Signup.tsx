@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { showToast } from '../lib/toast';
 import { Eye, EyeOff, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
 import { authAPI } from '../services/api';
 
@@ -32,10 +33,10 @@ const Signup: React.FC = () => {
     setLoading(true);
     try {
       await authAPI.signup(formData);
-      toast.success('Account created. Please sign in.');
+      showToast.success('Success', 'Account created. Please sign in.');
       navigate('/login');
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Signup failed');
+      showToast.error('Signup Failed', err.response?.data?.error || 'Signup failed');
     } finally {
       setLoading(false);
     }

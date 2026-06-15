@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { showToast } from '../lib/toast';
 import { Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
 import { authAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -35,10 +36,10 @@ const Login: React.FC = () => {
       const { token, agentId, username, fullName, email } = res.data;
       login(token, { agentId, username, fullName, email });
       const displayTitle = fullName ? fullName.toUpperCase() : username.toUpperCase();
-      toast.success(`Welcome, ${displayTitle}`);
+      showToast.success('Welcome', `Glad to have you back, ${displayTitle}`);
       navigate('/');
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Authentication failed');
+      showToast.error('Login Failed', err.response?.data?.error || 'Authentication failed');
     } finally {
       setLoading(false);
     }
