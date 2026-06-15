@@ -28,7 +28,7 @@ export default function BottomNavBar({
 }: BottomNavBarProps) {
   const location = useLocation()
   const navigate = useNavigate()
-  
+
   // Keep track of active index based on current path
   const [activeIndex, setActiveIndex] = useState(0)
 
@@ -47,8 +47,8 @@ export default function BottomNavBar({
       role="navigation"
       aria-label="Bottom Navigation"
       className={cn(
-        "bg-[#0d0c0e] border border-[#1e1c1f] rounded-full flex items-center p-2 shadow-xl space-x-1 min-w-[320px] max-w-[95vw] h-[52px]",
-        stickyBottom && "fixed inset-x-0 bottom-6 mx-auto z-50 w-fit",
+        "bg-[#0d0c0e] border border-[#1e1c1f] rounded-full flex flex-col items-center p-2 shadow-xl space-y-1 h-fit w-[52px]",
+        stickyBottom && "fixed left-4 top-[42%] -translate-y-1/2 z-50",
         className,
       )}
     >
@@ -61,7 +61,7 @@ export default function BottomNavBar({
             key={item.label}
             whileTap={{ scale: 0.97 }}
             className={cn(
-              "flex items-center gap-0 px-3 py-2 rounded-full transition-colors duration-200 relative h-10 min-w-[44px]",
+              "flex items-center justify-center rounded-full transition-colors duration-200 relative w-10 h-10",
               isActive
                 ? "bg-amber-500 text-black shadow-sm"
                 : "bg-transparent text-[#F5F0E8]/40 hover:text-[#F5F0E8] hover:bg-white/[0.05]",
@@ -81,31 +81,6 @@ export default function BottomNavBar({
               className="transition-colors duration-200 flex-shrink-0"
             />
 
-            <motion.div
-              initial={false}
-              animate={{
-                width: isActive ? `${MOBILE_LABEL_WIDTH}px` : "0px",
-                opacity: isActive ? 1 : 0,
-                marginLeft: isActive ? "8px" : "0px",
-              }}
-              transition={{
-                width: { type: "spring", stiffness: 350, damping: 32 },
-                opacity: { duration: 0.19 },
-                marginLeft: { duration: 0.19 },
-              }}
-              className={cn("overflow-hidden flex items-center text-left")}
-            >
-              <span
-                className={cn(
-                  "font-bold text-[11px] uppercase tracking-wider whitespace-nowrap select-none transition-opacity duration-200 overflow-hidden text-ellipsis",
-                  isActive ? "text-black" : "opacity-0",
-                )}
-                title={item.label}
-                style={{ fontFamily: 'Syne, sans-serif' }}
-              >
-                {item.label}
-              </span>
-            </motion.div>
           </motion.button>
         )
       })}

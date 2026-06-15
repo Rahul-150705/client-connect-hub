@@ -185,7 +185,7 @@ const Policies: React.FC = () => {
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [showModal, showDeleteModal, showConfirmModal]);
+  }, [showModal, showDeleteModal, showConfirmModal, selectedPolicy]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

@@ -18,7 +18,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#09080A] text-[#F5F0E8] flex flex-col relative pb-28">
+    <div className="min-h-screen bg-[#09080A] text-[#F5F0E8] flex flex-col relative pl-20">
 
       {/* Floating logo — top left (clickable → dashboard) */}
       <div
