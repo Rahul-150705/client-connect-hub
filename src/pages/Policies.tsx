@@ -88,7 +88,7 @@ const Policies: React.FC = () => {
       showToast.error('Invalid file', 'Please upload a PDF document.');
       return;
     }
-    
+
     setIsExtracting(true);
     setExtractionError('');
     try {
@@ -96,7 +96,7 @@ const Policies: React.FC = () => {
       const data = response.data;
       if (data.success) {
         showToast.success('Extracted', 'Form filled automatically from PDF.');
-        let extractedPhone = data.clientPhoneNumber || prev.clientPhoneNumber;
+        let extractedPhone = data.clientPhoneNumber || data.clientPhoneNumber;
         if (extractedPhone) {
           extractedPhone = extractedPhone.replace(/\D/g, ''); // strip all non-digits
           if (extractedPhone.startsWith('91') && extractedPhone.length > 10) {
@@ -105,7 +105,7 @@ const Policies: React.FC = () => {
             extractedPhone = '+91' + extractedPhone;
           }
         }
-        
+
         setFormData(prev => ({
           ...prev,
           clientFullName: data.clientFullName || prev.clientFullName,
@@ -491,10 +491,10 @@ const Policies: React.FC = () => {
                 </div>
                 <form onSubmit={e => { e.preventDefault(); policyToConfirm && confirmMutation.mutate({ id: policyToConfirm.policyId, data: { ...confirmFormData, newPremium: parseFloat(confirmFormData.newPremium), contactMethod: 'MANUAL_DASHBOARD' } }); }} className="space-y-4">
                   <div className="grid grid-cols-1 gap-3">
-                    <DateRangePicker 
-                      startDate={confirmFormData.newStartDate} 
-                      endDate={confirmFormData.newExpiryDate} 
-                      onChange={({ startDate, endDate }) => setConfirmFormData(p => ({ ...p, newStartDate: startDate, newExpiryDate: endDate }))} 
+                    <DateRangePicker
+                      startDate={confirmFormData.newStartDate}
+                      endDate={confirmFormData.newExpiryDate}
+                      onChange={({ startDate, endDate }) => setConfirmFormData(p => ({ ...p, newStartDate: startDate, newExpiryDate: endDate }))}
                     />
                   </div>
                   <ModalInput label="New Premium (₹)" type="number" required value={confirmFormData.newPremium} onChange={e => setConfirmFormData(p => ({ ...p, newPremium: e.target.value }))} placeholder="0" />
@@ -544,15 +544,15 @@ const Policies: React.FC = () => {
                           Upload a physical PDF to automatically fill this form.
                         </p>
                       </div>
-                      <input 
-                        type="file" 
-                        accept=".pdf" 
-                        ref={fileInputRef} 
-                        className="hidden" 
-                        onChange={handlePdfUpload} 
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        ref={fileInputRef}
+                        className="hidden"
+                        onChange={handlePdfUpload}
                       />
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isExtracting}
                         className={`px-4 py-2 text-[10px] font-black uppercase tracking-[0.1em] transition-all disabled:opacity-50 flex items-center gap-2 ${extractionError ? 'bg-red-500 hover:bg-red-400 text-white border-0' : 'bg-amber-500 hover:bg-amber-400 text-black border-0'}`}
@@ -597,10 +597,10 @@ const Policies: React.FC = () => {
                       <ModalInput label="Registration No." name="registrationNumber" placeholder="TN01AB1234" value={formData.registrationNumber} onChange={handleInputChange} />
                       <ModalInput label="Insurer Name" name="insurerName" placeholder="Company name" value={formData.insurerName} onChange={handleInputChange} />
                       <div className="col-span-1 md:col-span-2">
-                        <DateRangePicker 
-                          startDate={formData.startDate} 
-                          endDate={formData.expiryDate} 
-                          onChange={({ startDate, endDate }) => setFormData(p => ({ ...p, startDate, expiryDate: endDate }))} 
+                        <DateRangePicker
+                          startDate={formData.startDate}
+                          endDate={formData.expiryDate}
+                          onChange={({ startDate, endDate }) => setFormData(p => ({ ...p, startDate, expiryDate: endDate }))}
                         />
                       </div>
                       <ModalInput label="Premium (₹) *" name="premium" type="number" step="0.01" min="0" required placeholder="0.00" value={formData.premium} onChange={handleInputChange} />
@@ -638,7 +638,7 @@ const Policies: React.FC = () => {
                   </div>
                   <button onClick={() => setSelectedPolicy(null)} className="text-[#F5F0E8]/30 hover:text-[#F5F0E8]"><X className="w-4 h-4" /></button>
                 </div>
-                
+
                 <div className="space-y-6">
                   <div>
                     <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-[#F5F0E8]/40 mb-3" style={{ fontFamily: 'DM Mono, monospace' }}>Client Information</p>
