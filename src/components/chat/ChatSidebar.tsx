@@ -90,7 +90,7 @@ export default function ChatSidebar({
       <div className="px-3 pb-3 shrink-0 mt-2">
         <button
           onClick={onNewChat}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#e3e3e3] hover:bg-white text-[#131314] transition-all font-medium text-[14px]"
+          className="w-full flex items-center gap-3 px-3 py-3 rounded-xl bg-gradient-to-r from-[#e3e3e3] to-[#ffffff] hover:shadow-[0_0_12px_rgba(227,227,227,0.3)] text-[#131314] transition-all font-medium text-[14px]"
         >
           <Plus className="w-5 h-5" />
           <span>New chat</span>

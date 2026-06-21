@@ -164,7 +164,11 @@ export function useSummaryStream(
                                     // e.g. "hello world\n" → ["hello", " ", "world", "\n"]
                                     const tokens = chunk.split(/(\s+)/);
                                     wordQueueRef.current.push(...tokens);
-                                    startDrip();
+                                    if (document.hidden) {
+                                        flushDrip();
+                                    } else {
+                                        startDrip();
+                                    }
 
                                     setIsStreaming(true);
                                     break;

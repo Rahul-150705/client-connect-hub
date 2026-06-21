@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import ChatMessageBubble, { type ChatMessage } from './ChatMessageBubble';
 import ChatInputBar from './ChatInputBar';
+import ScrollToBottom from './ScrollToBottom';
 import { useQaStream } from '../../hooks/useQaStream';
 import { processLectureByMode } from '../../services/api';
 
@@ -55,6 +56,7 @@ export default function ChatView({
 
   // Summary messages only (file upload bubble + summary stream bubble)
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [copied, setCopied] = useState(false);
   const aiMsgIdRef = useRef<string | null>(null);
   const initializedRef = useRef(false);
@@ -124,15 +126,25 @@ export default function ChatView({
   useEffect(() => {
     if (scrollRef.current && (isStreaming || qaStream.isStreaming)) {
       if (!userScrolledUpRef.current) {
-        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'auto' });
       }
     }
   }, [streamingSummary, isStreaming, messages, qaStream.isStreaming, qaStream.messages]);
 
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
-    userScrolledUpRef.current = !isNearBottom(scrollRef.current);
+    const nearBottom = isNearBottom(scrollRef.current, 150);
+    userScrolledUpRef.current = !nearBottom;
+    setShowScrollBtn(!nearBottom);
   }, []);
+
+  const handleScrollToBottom = () => {
+    if (scrollRef.current) {
+      userScrolledUpRef.current = false;
+      setShowScrollBtn(false);
+      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  };
 
   // ── Follow-up question handler — uses streaming Q&A hook ──────────────────
 
@@ -245,7 +257,7 @@ export default function ChatView({
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="flex flex-col h-[calc(100vh-10rem)] rounded-2xl border border-border overflow-hidden"
+      className="flex flex-col h-[calc(100vh-10rem)] rounded-2xl border border-border overflow-hidden relative"
       style={{ background: 'var(--gradient-glass)', backdropFilter: 'blur(16px)', boxShadow: 'var(--shadow-card)' }}
     >
       {/* ── Header ── */}
@@ -315,6 +327,14 @@ export default function ChatView({
       <div
         ref={scrollRef}
         onScroll={handleScroll}
+        onWheel={(e) => {
+          if (e.deltaY < 0) {
+            userScrolledUpRef.current = true;
+          }
+        }}
+        onTouchStart={() => {
+          userScrolledUpRef.current = true;
+        }}
         className="flex-1 overflow-y-auto px-4 py-6 space-y-5 relative"
       >
         <AnimatePresence initial={false}>
@@ -373,6 +393,8 @@ export default function ChatView({
           </motion.div>
         )}
       </div>
+
+      <ScrollToBottom visible={showScrollBtn} onClick={handleScrollToBottom} />
 
       {/* ── Input bar ── */}
       <ChatInputBar

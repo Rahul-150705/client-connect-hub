@@ -42,6 +42,8 @@ export interface UseQaStreamReturn {
 // ── Drip speed — identical to useSummaryStream ────────────────────────────────
 /** Milliseconds between each drip tick. Keep in sync with useSummaryStream. */
 const DRIP_DELAY_MS = 18;
+// Minimum interval between manual message sends (rate limiting)
+const RATE_LIMIT_MS = 2000; // 2 seconds
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
@@ -75,6 +77,9 @@ export function useQaStream(
 
     const stompClientRef = useRef<Client | null>(null);
     const inFlightRef = useRef(false);
+  // Timestamp of last successful askQuestion call
+  const lastSentRef = useRef(0);
+
 
     // ── Drip-feed buffer (same shape as useSummaryStream) ────────────────────
     const wordQueueRef = useRef<string[]>([]);
@@ -217,10 +222,13 @@ export function useQaStream(
                                     }
 
                                     // Split into word-level tokens preserving whitespace —
-                                    // identical to useSummaryStream's split strategy
                                     const tokens = chunk.split(/(\s+)/);
                                     wordQueueRef.current.push(...tokens);
-                                    startDrip();
+                                    if (document.hidden) {
+                                        flushDrip();
+                                    } else {
+                                        startDrip();
+                                    }
                                     setIsStreaming(true);
                                     break;
                                 }
@@ -299,6 +307,13 @@ export function useQaStream(
     // ── 2. Trigger streaming via REST (mirrors useSummaryStream.triggerStream) ─
 
     const askQuestion = useCallback(async (question: string) => {
+        // Rate limiting: ensure at least RATE_LIMIT_MS between sends
+        const now = Date.now();
+        if (now - lastSentRef.current < RATE_LIMIT_MS) {
+          setError(`Please wait ${Math.ceil((RATE_LIMIT_MS - (now - lastSentRef.current)) / 1000)} seconds before sending another message.`);
+          return;
+        }
+        lastSentRef.current = now;
         if (!lectureId || !authToken || inFlightRef.current) return;
 
         inFlightRef.current = true;
@@ -357,7 +372,7 @@ export function useQaStream(
             setIsStreaming(false);
             inFlightRef.current = false;
         }
-    }, [lectureId, authToken, backendUrl]);
+    }, [lectureId, authToken, backendUrl, RATE_LIMIT_MS]);
 
     // ── 3. Clear conversation ─────────────────────────────────────────────────
 

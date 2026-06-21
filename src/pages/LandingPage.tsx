@@ -51,34 +51,6 @@ const HOW_IT_WORKS = [
     },
 ];
 
-const STATS = [
-    { value: '30s', label: 'Average summary time', icon: Clock },
-    { value: 'RAG', label: 'Powered Q&A engine', icon: Brain },
-    { value: '10+', label: 'Questions per quiz', icon: Target },
-    { value: '100%', label: 'Source-grounded answers', icon: Check },
-];
-
-const TESTIMONIALS = [
-    {
-        text: 'I summarized my entire semester of notes in an afternoon. The exam tips section alone saved me.',
-        author: 'Priya S.',
-        role: 'Computer Science student',
-        avatar: 'P',
-    },
-    {
-        text: 'The RAG-powered Q&A is incredible. I can ask "explain this concept" and get a precise answer from my own notes.',
-        author: 'Arjun M.',
-        role: 'Engineering student',
-        avatar: 'A',
-    },
-    {
-        text: 'Quiz generation turns passive reading into active recall. My exam scores improved significantly.',
-        author: 'Sanya K.',
-        role: 'Medical student',
-        avatar: 'S',
-    },
-];
-
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function Navbar() {
@@ -117,7 +89,7 @@ function Navbar() {
                 </button>
 
                 <div className="hidden md:flex items-center gap-6">
-                    {[['features', 'Features'], ['how-it-works', 'How it works'], ['testimonials', 'Reviews']].map(([id, label]) => (
+                    {[['features', 'Features'], ['how-it-works', 'How it works']].map(([id, label]) => (
                         <button key={id} onClick={() => scrollTo(id)}
                             className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium">
                             {label}
@@ -147,7 +119,7 @@ function Navbar() {
                 {mobileOpen && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
                         className="md:hidden bg-background/95 backdrop-blur-xl border-b border-border px-4 pb-4 space-y-1">
-                        {[['features', 'Features'], ['how-it-works', 'How it works'], ['testimonials', 'Reviews']].map(([id, label]) => (
+                        {[['features', 'Features'], ['how-it-works', 'How it works']].map(([id, label]) => (
                             <button key={id} onClick={() => scrollTo(id)}
                                 className="w-full text-left text-sm text-muted-foreground hover:text-foreground py-2.5 px-2 rounded-lg hover:bg-muted transition-colors font-medium">
                                 {label}
@@ -315,28 +287,6 @@ export default function LandingPage() {
                 </motion.div>
             </section>
 
-            {/* ═══════════════════════════ STATS ═══════════════════════════ */}
-            <section className="py-16 px-4 border-y border-border">
-                <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
-                    {STATS.map((stat, i) => (
-                        <motion.div key={i}
-                            initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.1 }} viewport={{ once: true }}
-                            className="flex flex-col items-center text-center gap-2">
-                            <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                                style={{ background: 'hsl(var(--primary) / 0.1)' }}>
-                                <stat.icon className="w-5 h-5 text-primary" />
-                            </div>
-                            <span className="text-3xl font-extrabold bg-clip-text text-transparent"
-                                style={{ backgroundImage: 'var(--gradient-brand)' }}>
-                                {stat.value}
-                            </span>
-                            <span className="text-sm text-muted-foreground font-medium">{stat.label}</span>
-                        </motion.div>
-                    ))}
-                </div>
-            </section>
-
             {/* ═══════════════════════════ FEATURES ═══════════════════════════ */}
             <section id="features" className="py-24 px-4">
                 <div className="max-w-6xl mx-auto">
@@ -429,47 +379,6 @@ export default function LandingPage() {
                                 </motion.div>
                             ))}
                         </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* ═══════════════════════════ TESTIMONIALS ═══════════════════════════ */}
-            <section id="testimonials" className="py-24 px-4">
-                <div className="max-w-5xl mx-auto">
-                    <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }} className="text-center mb-16 space-y-3">
-                        <span className="inline-flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-full bg-primary/5 text-primary border border-primary/20">
-                            <Users className="w-3.5 h-3.5" /> Student reviews
-                        </span>
-                        <h2 className="text-4xl font-extrabold text-foreground">
-                            Loved by students who study smarter
-                        </h2>
-                    </motion.div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {TESTIMONIALS.map((t, i) => (
-                            <motion.div key={i}
-                                initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }}
-                                transition={{ delay: i * 0.12 }} viewport={{ once: true }}
-                                className="glass-card p-6 space-y-5">
-                                <div className="flex gap-1">
-                                    {Array.from({ length: 5 }).map((_, si) => (
-                                        <Star key={si} className="w-4 h-4 fill-primary/70 text-primary/70" />
-                                    ))}
-                                </div>
-                                <p className="text-sm text-foreground leading-relaxed italic">"{t.text}"</p>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
-                                        style={{ background: 'var(--gradient-brand)' }}>
-                                        {t.avatar}
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-bold text-foreground">{t.author}</p>
-                                        <p className="text-xs text-muted-foreground">{t.role}</p>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))}
                     </div>
                 </div>
             </section>

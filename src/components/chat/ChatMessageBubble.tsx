@@ -2,7 +2,7 @@ import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
-  FileText, ChevronDown, ChevronUp,
+  FileText,
   Copy, Check, Loader2, Bot, Zap
 } from 'lucide-react';
 
@@ -32,7 +32,6 @@ const formatSize = (bytes: number) => {
 };
 
 export default function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
-  const [showSources, setShowSources] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -106,8 +105,9 @@ export default function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
         {/* Gemini-style AI Avatar */}
         {!isUser && (
           <div className="w-8 h-8 flex-shrink-0 mt-1">
-             <div className="w-full h-full rounded-full flex items-center justify-center border border-[#333537] bg-opacity-20">
-               <Bot className="w-5 h-5 text-[#a8c7fa]" />
+             <div className="w-full h-full rounded-full flex items-center justify-center border border-[#444746] bg-[#1e1f20] shadow-[0_0_15px_rgba(168,199,250,0.15)] relative overflow-hidden group">
+               <div className="absolute inset-0 bg-gradient-to-tr from-[#a8c7fa]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+               <Bot className="w-5 h-5 text-[#a8c7fa] z-10" />
              </div>
           </div>
         )}
@@ -115,8 +115,8 @@ export default function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
         {/* Bubble / Content Container */}
         <div className={`
           ${isUser 
-            ? 'bg-[#1e1f20] text-[#e3e3e3] rounded-[24px] rounded-tr-sm px-5 py-3'
-            : 'text-[#e3e3e3] py-1' // AI text has no background in Gemini style
+            ? 'bg-gradient-to-br from-[#1e1f20] to-[#282a2c] text-[#e3e3e3] rounded-[24px] rounded-tr-[4px] px-6 py-3.5 shadow-lg border border-[#333537]/60'
+            : 'text-[#e3e3e3] py-0.5' // AI text has no background in Gemini style
           }
         `}>
           
@@ -128,7 +128,7 @@ export default function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
               </div>
           )}
 
-          <div className="prose-chat w-full break-words">
+          <div className="prose-chat w-full break-words prose-p:leading-[1.7] prose-li:leading-[1.7] prose-pre:bg-[#131415] prose-pre:border prose-pre:border-[#333537] prose-pre:shadow-md prose-pre:rounded-xl">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {message.content}
             </ReactMarkdown>
@@ -150,31 +150,7 @@ export default function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
                  {copied ? <Check className="w-4 h-4 text-[#a8c7fa]" /> : <Copy className="w-4 h-4" />}
                </button>
 
-               {/* Source chunks dropdown */}
-               {message.sourceChunks && message.sourceChunks.length > 0 && (
-                 <button
-                   onClick={() => setShowSources(!showSources)}
-                   className="flex items-center gap-1.5 text-[13px] hover:text-[#e3e3e3] transition-colors ml-2"
-                 >
-                   <span>{message.sourceChunks.length} sources</span>
-                   {showSources ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                 </button>
-               )}
              </div>
-          )}
-
-          {/* Source Chunks Expansion */}
-          {!isUser && showSources && message.sourceChunks && message.sourceChunks.length > 0 && (
-            <div className="mt-3 pt-3 space-y-3">
-              <p className="text-[12px] font-medium text-[#c4c7c5] uppercase tracking-wide">
-                Grounding Sources
-              </p>
-              {message.sourceChunks.map((chunk, i) => (
-                <div key={i} className="bg-[#1e1f20] rounded-xl p-3 text-[13px] border border-[#333537] text-[#e3e3e3]">
-                   <p className="leading-relaxed break-words">{chunk}</p>
-                </div>
-              ))}
-            </div>
           )}
 
         </div>

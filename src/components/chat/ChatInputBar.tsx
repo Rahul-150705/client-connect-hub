@@ -98,7 +98,7 @@ export default function ChatInputBar({
     <div className="shrink-0 pb-6 w-full">
       <div className="w-full relative">
         <div
-           className={`relative flex items-end gap-2 rounded-3xl transition-all duration-200 bg-[#1e1f20] ${focused ? 'bg-[#282a2c]' : ''}`}
+           className={`relative flex items-end gap-2 rounded-3xl transition-all duration-300 bg-[#1e1f20] border ${focused ? 'border-[#444746] bg-[#282a2c] shadow-[0_0_15px_rgba(0,0,0,0.5)]' : 'border-transparent'}`}
            style={{ minHeight: '56px' }}
         >
           {/* File upload */}
