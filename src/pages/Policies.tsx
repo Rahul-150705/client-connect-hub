@@ -88,9 +88,7 @@ const Policies: React.FC = () => {
     setViewingPdfId(policyId);
     try {
       const res = await policyAPI.viewPolicyPdf(policyId);
-      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-      window.open(url, '_blank', 'noopener,noreferrer');
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      window.open(res.data.url, '_blank', 'noopener,noreferrer');
     } catch (err: any) {
       showToast.error(
         'Could not open document',

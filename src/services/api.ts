@@ -114,9 +114,8 @@ export const policyAPI = {
     });
   },
 
-  // Stream the stored PDF back (auth header required, so fetch as a blob)
-  viewPolicyPdf: (id: number) =>
-    api.get(`/policies/${id}/pdf`, { responseType: 'blob' }),
+  // Fetch presigned URL to view stored policy PDF
+  viewPolicyPdf: (id: number) => api.get(`/policies/${id}/pdf`),
 };
 
 // Client API
