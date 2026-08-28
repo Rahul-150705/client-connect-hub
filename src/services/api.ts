@@ -67,7 +67,6 @@ export const policyAPI = {
     premium: number;
     premiumFrequency: string;
     policyDescription?: string;
-    pdfFilePath?: string;
   }) => api.post('/policies/create', policyData),
   
   getAllMyPolicies: () => api.get('/policies'),
@@ -92,30 +91,32 @@ export const policyAPI = {
     contactMethod?: string;
   }) => api.post(`/policies/${id}/confirm-renewal`, renewalData),
   
-  // PDF storage disabled
-  // uploadPdf: (file: File, clientEmail: string, policyNumber: string) => {
-  //   const formData = new FormData();
-  //   formData.append('file', file);
-  //   formData.append('clientEmail', clientEmail);
-  //   formData.append('policyNumber', policyNumber);
-  //   
-  //   return api.post('/policies/upload-pdf', formData, {
-  //     headers: {
-  //       'Content-Type': 'multipart/form-data',
-  //     },
-  //   });
-  // },
-  
   extractFromPdf: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    
+
     return api.post('/policies/extract-from-pdf', formData, {
       headers: {
         'Content-Type': undefined,
       },
     });
   },
+
+  // Attach / replace the stored PDF document for a policy (saved to S3, agent-scoped)
+  uploadPolicyPdf: (id: number, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return api.post(`/policies/${id}/pdf`, formData, {
+      headers: {
+        'Content-Type': undefined,
+      },
+    });
+  },
+
+  // Stream the stored PDF back (auth header required, so fetch as a blob)
+  viewPolicyPdf: (id: number) =>
+    api.get(`/policies/${id}/pdf`, { responseType: 'blob' }),
 };
 
 // Client API

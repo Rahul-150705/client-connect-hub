@@ -8,7 +8,7 @@ import { format } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import Layout from '../components/Layout';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileText, Plus, X, UploadCloud, Loader2 } from 'lucide-react';
+import { FileText, Plus, X, UploadCloud, Loader2, Paperclip } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 
@@ -79,7 +79,27 @@ const Policies: React.FC = () => {
   });
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionError, setExtractionError] = useState('');
+  // PDF held from the extraction step so it can be stored once the policy is created
+  const [pendingPdfFile, setPendingPdfFile] = useState<File | null>(null);
+  const [viewingPdfId, setViewingPdfId] = useState<number | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleViewPdf = async (policyId: number) => {
+    setViewingPdfId(policyId);
+    try {
+      const res = await policyAPI.viewPolicyPdf(policyId);
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      window.open(url, '_blank', 'noopener,noreferrer');
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err: any) {
+      showToast.error(
+        'Could not open document',
+        err.response?.status === 404 ? 'No document stored for this policy.' : 'Failed to load the PDF.'
+      );
+    } finally {
+      setViewingPdfId(null);
+    }
+  };
 
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -88,6 +108,9 @@ const Policies: React.FC = () => {
       showToast.error('Invalid file', 'Please upload a PDF document.');
       return;
     }
+
+    // Keep the file so it gets stored with the policy on create
+    setPendingPdfFile(file);
 
     setIsExtracting(true);
     setExtractionError('');
@@ -149,7 +172,19 @@ const Policies: React.FC = () => {
   const loading = policiesQuery.isLoading;
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => policyAPI.createPolicyWithClient(data),
+    mutationFn: async (data: any) => {
+      const res = await policyAPI.createPolicyWithClient(data);
+      const newPolicyId = res.data?.policyId;
+      if (pendingPdfFile && newPolicyId) {
+        try {
+          await policyAPI.uploadPolicyPdf(newPolicyId, pendingPdfFile);
+        } catch {
+          // Policy is created; only the document upload failed — surface it but don't fail the flow
+          showToast.error('Document not saved', 'The policy was created but its PDF could not be stored.');
+        }
+      }
+      return res;
+    },
     onSuccess: () => { showToast.success('Created', 'Policy added to portfolio.'); handleCloseModal(); queryClient.invalidateQueries({ queryKey: ['policies'] }); queryClient.invalidateQueries({ queryKey: ['dashboardSummary'] }); },
     onError: (e: any) => showToast.error('Failed', e.response?.data?.error || 'Could not create policy'),
   });
@@ -196,6 +231,8 @@ const Policies: React.FC = () => {
   const handleCloseModal = () => {
     setShowModal(false);
     setFormData({ clientFullName: '', clientEmail: '', clientPhoneNumber: '', clientWhatsappNumber: '', clientAddress: '', policyNumber: '', policyType: 'VEHICLE', vehicleType: 'Car', registrationNumber: '', insurerName: '', startDate: '', expiryDate: '', premium: '', premiumFrequency: 'YEARLY', policyDescription: '' });
+    setPendingPdfFile(null);
+    setExtractionError('');
   };
 
   const getDaysUntilExpiry = (d: string) => Math.ceil((new Date(d).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
@@ -353,8 +390,9 @@ const Policies: React.FC = () => {
                           {String((currentPage - 1) * pageSize + idx + 1).padStart(2, '0')}
                         </td>
                         <td className="px-5 py-4">
-                          <span className="text-[10px] font-bold text-amber-500" style={{ fontFamily: 'DM Mono, monospace' }}>
+                          <span className="text-[10px] font-bold text-amber-500 inline-flex items-center gap-1.5" style={{ fontFamily: 'DM Mono, monospace' }}>
                             {policy.policyNumber}
+                            {policy.hasPdf && <Paperclip className="w-2.5 h-2.5 text-[#F5F0E8]/40" aria-label="Document attached" />}
                           </span>
                         </td>
                         <td className="px-5 py-4">
@@ -567,6 +605,11 @@ const Policies: React.FC = () => {
                         Error: {extractionError}
                       </p>
                     )}
+                    {pendingPdfFile && (
+                      <p className="text-[10px] font-bold text-emerald-500 tracking-wide mt-1 flex items-center gap-1.5" style={{ fontFamily: 'DM Mono, monospace' }}>
+                        <Paperclip className="w-3 h-3" /> {pendingPdfFile.name} — saved with this policy
+                      </p>
+                    )}
                   </div>
                 </div>
                 <form onSubmit={handleSubmit} className="p-6 space-y-6">
@@ -698,6 +741,26 @@ const Policies: React.FC = () => {
                           <p className="text-[#F5F0E8]/40 mb-1">Description</p>
                           <p className="text-[#F5F0E8] whitespace-pre-wrap">{selectedPolicy.policyDescription}</p>
                         </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-[#F5F0E8]/40 mb-3" style={{ fontFamily: 'DM Mono, monospace' }}>Policy Document</p>
+                    <div className="bg-[#111018] border border-[#1e1c1f] p-4">
+                      {selectedPolicy.hasPdf ? (
+                        <button
+                          onClick={() => handleViewPdf(selectedPolicy.policyId)}
+                          disabled={viewingPdfId === selectedPolicy.policyId}
+                          className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black text-[10px] font-black uppercase tracking-[0.1em] disabled:opacity-50 transition-all"
+                          style={{ borderRadius: 0, fontFamily: 'DM Mono, monospace' }}>
+                          {viewingPdfId === selectedPolicy.policyId
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            : <FileText className="w-3.5 h-3.5" />}
+                          {viewingPdfId === selectedPolicy.policyId ? 'Opening...' : 'View Document'}
+                        </button>
+                      ) : (
+                        <p className="text-[10px] text-[#F5F0E8]/40" style={{ fontFamily: 'DM Mono, monospace' }}>No document attached to this policy.</p>
                       )}
                     </div>
                   </div>
