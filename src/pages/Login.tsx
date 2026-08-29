@@ -222,11 +222,16 @@ const Login: React.FC = () => {
               type="button"
               onClick={handleGoogleLogin}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 border border-[#1e1c1f] bg-[#0d0c0e] hover:border-amber-500 hover:text-amber-500 text-[#F5F0E8]
+              className="w-full flex items-center justify-center gap-3 border border-[#1e1c1f] bg-[#ffffff] hover:border-[#4285F4] text-[#1f1f1f]
                 py-3.5 text-[11px] font-black uppercase tracking-[0.2em] transition-all disabled:opacity-60"
               style={{ borderRadius: 0 }}
             >
-              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-white text-black text-[10px] font-black">G</span>
+              <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
+                <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.4-1.7 4.1-5.5 4.1-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.2.8 4 1.5l2.7-2.6C16.8 3.2 14.7 2.2 12 2.2 6.9 2.2 2.8 6.3 2.8 11.4S6.9 20.6 12 20.6c6.9 0 11.4-4.8 11.4-11.6 0-.8-.1-1.4-.2-2H12z" opacity="0.9"/>
+                <path fill="#34A853" d="M3.8 7.2l3.8 2.8c1-1.8 3.1-3 5.4-3 1.9 0 3.2.8 4 1.5l2.7-2.6C16.8 3.2 14.7 2.2 12 2.2c-3.7 0-6.9 2.1-8.2 5z" opacity="0.9"/>
+                <path fill="#FBBC05" d="M3.8 15.6c1.3 2.9 4.5 5 8.2 5 2.5 0 4.6-.9 6.1-2.5l-3-2.5c-.8.5-1.9.9-3.1.9-2.2 0-4.2-1.5-4.9-3.5l-3.3 2.6z" opacity="0.9"/>
+                <path fill="#4285F4" d="M12 21.1c2.7 0 5-.9 6.7-2.4l-3-2.5c-.9.6-2.1 1-3.7 1-2.9 0-5.4-2-6.2-4.7l-3.3 2.6C1.6 18.3 6.1 21.1 12 21.1z" opacity="0.9"/>
+              </svg>
               Continue with Google
             </button>
           </form>
