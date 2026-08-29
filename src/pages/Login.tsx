@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { showToast } from '../lib/toast';
 import { Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
 import { authAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+
+const getGoogleAuthUrl = () => {
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+  const backendOrigin = apiBaseUrl.replace(/\/api\/?$/, '');
+  return `${backendOrigin}/oauth2/authorization/google`;
+};
 
 const Login: React.FC = () => {
   const [credentials, setCredentials] = useState({ username: '', password: '' });
@@ -13,6 +19,31 @@ const Login: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const token = params.get('token') || hashParams.get('token');
+    const agentId = Number(params.get('agentId') || hashParams.get('agentId'));
+    const username = params.get('username') || hashParams.get('username');
+    const fullName = params.get('fullName') || hashParams.get('fullName');
+    const email = params.get('email') || hashParams.get('email');
+
+    if (!token || !username || !email) {
+      return;
+    }
+
+    login(token, {
+      agentId: Number.isFinite(agentId) ? agentId : 0,
+      username,
+      fullName: fullName || username,
+      email,
+    });
+
+    showToast.success('Welcome', `Logged in with Google as ${fullName || username}`);
+    window.history.replaceState({}, '', '/login');
+    navigate('/');
+  }, [login, navigate]);
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -43,6 +74,10 @@ const Login: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleLogin = () => {
+    window.location.href = getGoogleAuthUrl();
   };
 
   return (
@@ -171,6 +206,28 @@ const Login: React.FC = () => {
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </>
               )}
+            </button>
+
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-[#1e1c1f]" />
+              </div>
+              <div className="relative flex justify-center text-[10px] uppercase tracking-[0.25em] text-[#F5F0E8]/35"
+                style={{ fontFamily: 'DM Mono, monospace' }}>
+                <span className="bg-[#09080A] px-3">or</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-3 border border-[#1e1c1f] bg-[#0d0c0e] hover:border-amber-500 hover:text-amber-500 text-[#F5F0E8]
+                py-3.5 text-[11px] font-black uppercase tracking-[0.2em] transition-all disabled:opacity-60"
+              style={{ borderRadius: 0 }}
+            >
+              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-white text-black text-[10px] font-black">G</span>
+              Continue with Google
             </button>
           </form>
 
