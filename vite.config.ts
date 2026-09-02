@@ -1,33 +1,36 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react-swc'
-import path from 'path'
-import { componentTagger } from 'lovable-tagger'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react-swc";
+import path from "path";
+import { componentTagger } from "lovable-tagger";
 
+// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  define: { global: 'globalThis' },   // sockjs-client expects Node's `global`
-  plugins: [
-    react(),
-    mode === 'development' && componentTagger(),
-  ].filter(Boolean),
+  server: {
+    host: "::",
+    port: 8000,
+    hmr: {
+      overlay: false,
+    },
+  },
+  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      "@": path.resolve(__dirname, "./src"),
+    },
+    dedupe: ["react", "react-dom"],
+  },
+  optimizeDeps: {
+    include: [
+      "@splinetool/react-spline",
+      "@splinetool/runtime",
+      "react/jsx-runtime",
+      "react",
+      "react-dom"
+    ],
+  },
+  build: {
+    commonjsOptions: {
+      transformMixedEsModules: true,
     },
   },
-  server: {
-    host: 'localhost',
-    port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/ws': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-        ws: true,  // ← required for WebSocket upgrade
-      },
-    },
-  },
-}))
+}));
